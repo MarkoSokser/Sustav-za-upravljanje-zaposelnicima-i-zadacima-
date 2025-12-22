@@ -840,27 +840,8 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 
 ---
 
-## 3.8 Dijagram - smjernice za izradu
 
-### Preporučeni alati
-- **draw.io** (diagrams.net) – besplatan, online
-- **Lucidchart** – profesionalni alat
-- **DbDiagram.io** – specifičan za baze podataka
-- **PlantUML** – tekstualni opis dijagrama
 
-### Elementi za uključiti
-1. Sve entitete kao pravokutnike s atributima
-2. Primarne ključeve označene (PK)
-3. Strane ključeve označene (FK)
-4. Linije odnosa s kardinalnostima (1, M, N)
-5. ENUM tipove kao zasebne elemente
-6. Grupiranje po domenama (User Management, Task Management, Audit)
 
-### Format izvoza
-- PNG (za dokumentaciju)
-- SVG (za skalabilnost)
-- PDF (za prezentacije)
-
----
 
 
