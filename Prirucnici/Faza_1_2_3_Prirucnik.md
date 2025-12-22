@@ -656,71 +656,74 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 │                              ER DIJAGRAM                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│                         ┌───────────────┐                                │
-│                         │   Permission  │                                │
-│                         │───────────────│                                │
-│                         │ permission_id │                                │
-│                         │ code          │                                │
-│                         │ name          │                                │
-│                         │ category      │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ M                                      │
-│                                 │                                        │
-│                         ┌───────┴───────┐                                │
-│                         │RolePermission │                                │
-│                         │───────────────│                                │
-│                         │ role_id (FK)  │                                │
-│                         │ permission_id │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ M                                      │
-│                                 │                                        │
-│ ┌───────────────┐       ┌───────┴───────┐       ┌───────────────┐        │
-│ │   LoginEvent  │       │     Role      │       │   AuditLog    │        │
-│ │───────────────│       │───────────────│       │───────────────│        │
-│ │ login_event_id│       │ role_id       │       │ audit_log_id  │        │
-│ │ user_id (FK)  │       │ name          │       │ entity_name   │        │
-│ │ login_time    │       │ description   │       │ entity_id     │        │
-│ │ ip_address    │       │ is_system     │       │ action        │        │
-│ │ success       │       └───────┬───────┘       │ changed_by(FK)│        │
-│ └───────┬───────┘               │               └───────┬───────┘        │
-│         │                       │ M                     │                │
-│         │ M                     │                       │ M              │
-│         │               ┌───────┴───────┐               │                │
-│         │               │   UserRole    │               │                │
-│         │               │───────────────│               │                │
-│         │               │ user_id (FK)  │               │                │
-│         │               │ role_id (FK)  │               │                │
-│         │               │ assigned_by   │               │                │
-│         │               └───────┬───────┘               │                │
-│         │                       │ M                     │                │
-│         │                       │                       │                │
-│         │               ┌───────┴───────┐               │                │
-│         └──────────────►│     User      │◄──────────────┘                │
-│                         │───────────────│                                │
-│                         │ user_id       │◄──────┐                        │
-│                         │ username      │       │                        │
-│                         │ email         │       │ manager_id             │
-│                         │ first_name    │       │ (self-reference)       │
-│                         │ last_name     │       │                        │
-│                         │ manager_id(FK)│───────┘                        │
-│                         │ is_active     │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ 1                                      │
-│                                 │                                        │
-│                         ┌───────┴───────┐                                │
-│                         │     Task      │                                │
-│                         │───────────────│                                │
-│                         │ task_id       │                                │
-│                         │ title         │                                │
-│                         │ status        │                                │
-│                         │ priority      │                                │
-│                         │ created_by(FK)│                                │
-│                         │ assigned_to   │                                │
-│                         │ due_date      │                                │
-│                         └───────────────┘                                │
+│                         ┌─────────────────┐                              │
+│                         │   Permission    │                              │
+│                         │─────────────────│                              │
+│                         │ permission_id PK│                              │
+│                         │ code            │                              │
+│                         │ name            │                              │
+│                         │ category        │                              │
+│                         └────────┬────────┘                              │
+│                                  │                                       │
+│                                  │ M                                     │
+│                                  │                                       │
+│                         ┌────────┴────────┐                              │
+│                         │ RolePermission  │                              │
+│                         │─────────────────│                              │
+│                         │ role_perm_id PK │                              │
+│                         │ role_id FK      │                              │
+│                         │ permission_id FK│                              │
+│                         └────────┬────────┘                              │
+│                                  │                                       │
+│                                  │ M                                     │
+│                                  │                                       │
+│ ┌─────────────────┐     ┌────────┴────────┐     ┌─────────────────┐      │
+│ │   LoginEvent    │     │      Role       │     │    AuditLog     │      │
+│ │─────────────────│     │─────────────────│     │─────────────────│      │
+│ │ login_event_id  │     │ role_id PK      │     │ audit_log_id PK │      │
+│ │            PK   │     │ name            │     │ entity_name     │      │
+│ │ user_id FK      │     │ description     │     │ entity_id       │      │
+│ │ login_time      │     │ is_system       │     │ action          │      │
+│ │ ip_address      │     └────────┬────────┘     │ changed_by FK   │      │
+│ │ success         │              │              └────────┬────────┘      │
+│ └────────┬────────┘              │ M                     │               │
+│          │                       │                       │ M             │
+│          │ M             ┌───────┴───────┐               │               │
+│          │               │   UserRole    │               │               │
+│          │               │───────────────│               │               │
+│          │               │ user_role_id  │               │               │
+│          │               │          PK   │               │               │
+│          │               │ user_id FK    │               │               │
+│          │               │ role_id FK    │               │               │
+│          │               │ assigned_by FK│               │               │
+│          │               └───────┬───────┘               │               │
+│          │                       │ M                     │               │
+│          │                       │                       │               │
+│          │               ┌───────┴───────┐               │               │
+│          └──────────────►│     User      │◄──────────────┘               │
+│                          │───────────────│                               │
+│                          │ user_id PK    │◄──────┐                       │
+│                          │ username      │       │                       │
+│                          │ email         │       │ manager_id            │
+│                          │ first_name    │       │ (self-reference)      │
+│                          │ last_name     │       │                       │
+│                          │ manager_id FK │───────┘                       │
+│                          │ is_active     │                               │
+│                          └───────┬───────┘                               │
+│                                  │                                       │
+│                                  │ 1                                     │
+│                                  │                                       │
+│                          ┌───────┴───────┐                               │
+│                          │     Task      │                               │
+│                          │───────────────│                               │
+│                          │ task_id PK    │                               │
+│                          │ title         │                               │
+│                          │ status        │                               │
+│                          │ priority      │                               │
+│                          │ created_by FK │                               │
+│                          │ assigned_to FK│                               │
+│                          │ due_date      │                               │
+│                          └───────────────┘                               │
 │                                                                          │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
