@@ -747,6 +747,9 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 │                                                                                  │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
+![ERA model](/images/ERA.png)
+*Figure 1: ERA dijagram *
+
 
 ### 3.5.2 Tablica kardinalnosti
 
