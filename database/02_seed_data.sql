@@ -1,154 +1,149 @@
---  Početni podaci (Seed Data)
+-- Pocetni podaci (Seed Data)
 -- Interni sustav za upravljanje zaposlenicima i zadacima
 
 SET search_path TO employee_management;
 
 
--- POČETNI PODACI - PERMISSIONS (Prava pristupa)
+-- POCETNI PODACI - PERMISSIONS (Prava pristupa)
 -- Upravljanje korisnicima
 INSERT INTO permissions (code, name, description, category) VALUES
-('USER_CREATE', 'Kreiranje korisnika', 'Mogućnost kreiranja novih korisničkih računa', 'USER'),
-('USER_READ_ALL', 'Pregled svih korisnika', 'Mogućnost pregleda svih korisnika u sustavu', 'USER'),
-('USER_READ_TEAM', 'Pregled tima', 'Mogućnost pregleda korisnika u vlastitom timu', 'USER'),
-('USER_READ_SELF', 'Pregled vlastitih podataka', 'Mogućnost pregleda vlastitih podataka', 'USER'),
-('USER_UPDATE_ALL', 'Uređivanje svih korisnika', 'Mogućnost uređivanja svih korisničkih računa', 'USER'),
-('USER_UPDATE_SELF', 'Uređivanje vlastitih podataka', 'Mogućnost uređivanja vlastitih podataka', 'USER'),
-('USER_DEACTIVATE', 'Deaktivacija korisnika', 'Mogućnost deaktivacije korisničkih računa', 'USER');
+('USER_CREATE', 'Kreiranje korisnika', 'Mogucnost kreiranja novih korisnickih racuna', 'USER'),
+('USER_READ_ALL', 'Pregled svih korisnika', 'Mogucnost pregleda svih korisnika u sustavu', 'USER'),
+('USER_READ_TEAM', 'Pregled tima', 'Mogucnost pregleda korisnika u vlastitom timu', 'USER'),
+('USER_READ_SELF', 'Pregled vlastitih podataka', 'Mogucnost pregleda vlastitih podataka', 'USER'),
+('USER_UPDATE_ALL', 'Uredj rating svih korisnika', 'Mogucnost uredjivanja svih korisnickih racuna', 'USER'),
+('USER_UPDATE_SELF', 'Uredjivanje vlastitih podataka', 'Mogucnost uredjivanja vlastitih podataka', 'USER'),
+('USER_DEACTIVATE', 'Deaktivacija korisnika', 'Mogucnost deaktivacije korisnickih racuna', 'USER');
 
 -- Upravljanje ulogama
 INSERT INTO permissions (code, name, description, category) VALUES
-('ROLE_CREATE', 'Kreiranje uloga', 'Mogućnost kreiranja novih uloga', 'ROLE'),
-('ROLE_READ', 'Pregled uloga', 'Mogućnost pregleda uloga u sustavu', 'ROLE'),
-('ROLE_UPDATE', 'Uređivanje uloga', 'Mogućnost uređivanja postojećih uloga', 'ROLE'),
-('ROLE_DELETE', 'Brisanje uloga', 'Mogućnost brisanja uloga', 'ROLE'),
-('ROLE_ASSIGN', 'Dodjela uloga', 'Mogućnost dodjeljivanja uloga korisnicima', 'ROLE'),
-('PERMISSION_MANAGE', 'Upravljanje pravima', 'Mogućnost upravljanja pravima pristupa', 'ROLE');
+('ROLE_CREATE', 'Kreiranje uloga', 'Mogucnost kreiranja novih uloga', 'ROLE'),
+('ROLE_READ', 'Pregled uloga', 'Mogucnost pregleda uloga u sustavu', 'ROLE'),
+('ROLE_UPDATE', 'Uredjivanje uloga', 'Mogucnost uredjivanja postojecih uloga', 'ROLE'),
+('ROLE_DELETE', 'Brisanje uloga', 'Mogucnost brisanja uloga', 'ROLE'),
+('ROLE_ASSIGN', 'Dodjela uloga', 'Mogucnost dodjeljivanja uloga korisnicima', 'ROLE'),
+('PERMISSION_MANAGE', 'Upravljanje pravima', 'Mogucnost upravljanja pravima pristupa', 'ROLE');
 
 -- Upravljanje zadacima
 INSERT INTO permissions (code, name, description, category) VALUES
-('TASK_CREATE', 'Kreiranje zadataka', 'Mogućnost kreiranja novih zadataka', 'TASK'),
-('TASK_ASSIGN', 'Dodjela zadataka', 'Mogućnost dodjeljivanja zadataka korisnicima', 'TASK'),
-('TASK_READ_ALL', 'Pregled svih zadataka', 'Mogućnost pregleda svih zadataka u sustavu', 'TASK'),
-('TASK_READ_TEAM', 'Pregled zadataka tima', 'Mogućnost pregleda zadataka u vlastitom timu', 'TASK'),
-('TASK_READ_SELF', 'Pregled vlastitih zadataka', 'Mogućnost pregleda vlastitih zadataka', 'TASK'),
-('TASK_UPDATE_ANY', 'Uređivanje svih zadataka', 'Mogućnost uređivanja bilo kojeg zadatka', 'TASK'),
-('TASK_UPDATE_SELF_STATUS', 'Ažuriranje statusa', 'Mogućnost ažuriranja statusa vlastitih zadataka', 'TASK'),
-('TASK_DELETE', 'Brisanje zadataka', 'Mogućnost brisanja zadataka', 'TASK');
+('TASK_CREATE', 'Kreiranje zadataka', 'Mogucnost kreiranja novih zadataka', 'TASK'),
+('TASK_ASSIGN', 'Dodjela zadataka', 'Mogucnost dodjeljivanja zadataka korisnicima', 'TASK'),
+('TASK_READ_ALL', 'Pregled svih zadataka', 'Mogucnost pregleda svih zadataka u sustavu', 'TASK'),
+('TASK_READ_TEAM', 'Pregled zadataka tima', 'Mogucnost pregleda zadataka u vlastitom timu', 'TASK'),
+('TASK_READ_SELF', 'Pregled vlastitih zadataka', 'Mogucnost pregleda vlastitih zadataka', 'TASK'),
+('TASK_UPDATE_ANY', 'Uredjivanje svih zadataka', 'Mogucnost uredjivanja bilo kojeg zadatka', 'TASK'),
+('TASK_UPDATE_SELF_STATUS', 'Azuriranje statusa', 'Mogucnost azuriranja statusa vlastitih zadataka', 'TASK'),
+('TASK_DELETE', 'Brisanje zadataka', 'Mogucnost brisanja zadataka', 'TASK');
 
 -- Audit i meta-podaci
 INSERT INTO permissions (code, name, description, category) VALUES
-('AUDIT_READ_ALL', 'Pregled audit zapisa', 'Mogućnost pregleda svih audit zapisa', 'AUDIT'),
-('LOGIN_EVENTS_READ_ALL', 'Pregled svih prijava', 'Mogućnost pregleda svih prijava u sustav', 'AUDIT'),
-('LOGIN_EVENTS_READ_SELF', 'Pregled vlastitih prijava', 'Mogućnost pregleda vlastitih prijava', 'AUDIT');
+('AUDIT_READ_ALL', 'Pregled audit zapisa', 'Mogucnost pregleda svih audit zapisa', 'AUDIT'),
+('LOGIN_EVENTS_READ_ALL', 'Pregled svih prijava', 'Mogucnost pregleda svih prijava u sustav', 'AUDIT'),
+('LOGIN_EVENTS_READ_SELF', 'Pregled vlastitih prijava', 'Mogucnost pregleda vlastitih prijava', 'AUDIT');
 
 
--- POČETNI PODACI - ROLES (Uloge)
+-- POCETNI PODACI - ROLES (Uloge)
 INSERT INTO roles (name, description, is_system) VALUES
 ('ADMIN', 'Administrator sustava s punim pristupom svim funkcionalnostima', TRUE),
 ('MANAGER', 'Voditelj tima koji upravlja zaposlenicima i zadacima', TRUE),
 ('EMPLOYEE', 'Zaposlenik s pristupom vlastitim podacima i zadacima', TRUE);
 
 
--- POČETNI PODACI - ROLE_PERMISSIONS (RBAC matrica)
--- ADMIN - sva prava
+-- POCETNI PODACI - ROLE_PERMISSIONS (RBAC Matrix)
+-- ADMIN ima SVA prava (26 permissions)
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
-FROM roles r, permissions p
-WHERE r.name = 'ADMIN';
+SELECT 
+    (SELECT role_id FROM roles WHERE name = 'ADMIN'),
+    permission_id
+FROM permissions;
 
--- MANAGER prava
+-- MANAGER ima 12 permissions
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
-FROM roles r, permissions p
-WHERE r.name = 'MANAGER' 
-AND p.code IN (
-    'USER_READ_TEAM',
-    'USER_READ_SELF',
-    'USER_UPDATE_SELF',
+SELECT 
+    (SELECT role_id FROM roles WHERE name = 'MANAGER'),
+    permission_id
+FROM permissions
+WHERE code IN (
+    'USER_READ_ALL', 'USER_READ_TEAM', 'USER_READ_SELF', 'USER_UPDATE_SELF',
     'ROLE_READ',
-    'TASK_CREATE',
-    'TASK_ASSIGN',
-    'TASK_READ_TEAM',
-    'TASK_READ_SELF',
-    'TASK_UPDATE_ANY',
-    'TASK_UPDATE_SELF_STATUS',
-    'TASK_DELETE',
+    'TASK_CREATE', 'TASK_ASSIGN', 'TASK_READ_ALL', 'TASK_READ_TEAM', 'TASK_UPDATE_ANY', 'TASK_DELETE',
     'LOGIN_EVENTS_READ_SELF'
 );
 
--- EMPLOYEE prava
+-- EMPLOYEE ima 5 permissions
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
-FROM roles r, permissions p
-WHERE r.name = 'EMPLOYEE' 
-AND p.code IN (
-    'USER_READ_SELF',
-    'USER_UPDATE_SELF',
-    'TASK_READ_SELF',
-    'TASK_UPDATE_SELF_STATUS',
+SELECT 
+    (SELECT role_id FROM roles WHERE name = 'EMPLOYEE'),
+    permission_id
+FROM permissions
+WHERE code IN (
+    'USER_READ_SELF', 'USER_UPDATE_SELF',
+    'TASK_READ_SELF', 'TASK_UPDATE_SELF_STATUS',
     'LOGIN_EVENTS_READ_SELF'
 );
 
 
--- POČETNI PODACI - USERS (Testni korisnici)
-
--- Napomena: password_hash je bcrypt hash za lozinku 'Password123!'
--- U produkciji koristiti pravu hash funkciju!
-
--- Administrator
-INSERT INTO users (username, email, password_hash, first_name, last_name, is_active) VALUES
-('admin', 'admin@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'System', 'Administrator', TRUE);
+-- POCETNI PODACI - USERS (Testni korisnici)
+-- Admin
+INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
+('admin', 'admin@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'System', 'Admin', NULL, TRUE);
 
 -- Manageri
-INSERT INTO users (username, email, password_hash, first_name, last_name, is_active) VALUES
-('ivan_manager', 'ivan.horvat@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'Ivan', 'Horvat', TRUE),
-('ana_manager', 'ana.kovac@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'Ana', 'Kovač', TRUE);
-
--- Zaposlenici pod Ivan Horvat
 INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
-('marko_dev', 'marko.babic@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'Marko', 'Babić', 
-    (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE),
-('petra_dev', 'petra.novak@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'Petra', 'Novak', 
-    (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE),
-('luka_dev', 'luka.maric@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'Luka', 'Marić', 
-    (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE);
+('ivan_manager', 'ivan.horvat@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Ivan', 'Horvat', (SELECT user_id FROM users WHERE username = 'admin'), TRUE),
+('ana_manager', 'ana.kovac@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Ana', 'Kovac', (SELECT user_id FROM users WHERE username = 'admin'), TRUE);
 
--- Zaposlenici pod Ana Kovač
+-- Zaposlenici - Development Team (pod Ivanom)
 INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
-('maja_design', 'maja.juric@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'Maja', 'Jurić', 
-    (SELECT user_id FROM users WHERE username = 'ana_manager'), TRUE),
-('tomislav_design', 'tomislav.peric@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'Tomislav', 'Perić', 
-    (SELECT user_id FROM users WHERE username = 'ana_manager'), TRUE);
+('marko_dev', 'marko.novak@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Marko', 'Novak', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE),
+('petra_dev', 'petra.juric@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Petra', 'Juric', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE),
+('luka_dev', 'luka.baric@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Luka', 'Baric', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE);
+
+-- Zaposlenici - Design Team (pod Anom)
+INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
+('maja_design', 'maja.pavic@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Maja', 'Pavic', (SELECT user_id FROM users WHERE username = 'ana_manager'), TRUE),
+('tomislav_design', 'tomislav.knez@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Tomislav', 'Knez', (SELECT user_id FROM users WHERE username = 'ana_manager'), TRUE);
+
+-- Deaktivirani korisnik
+INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
+('old_employee', 'old.employee@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Old', 'Employee', NULL, FALSE);
+
+
+-- POCETNI PODACI - USER_ROLES (Dodjela uloga)
+-- Admin
+INSERT INTO user_roles (user_id, role_id)
+VALUES (
+    (SELECT user_id FROM users WHERE username = 'admin'),
+    (SELECT role_id FROM roles WHERE name = 'ADMIN')
+);
+
+-- Manageri
+INSERT INTO user_roles (user_id, role_id)
+SELECT 
+    user_id,
+    (SELECT role_id FROM roles WHERE name = 'MANAGER')
+FROM users
+WHERE username IN ('ivan_manager', 'ana_manager');
+
+-- Zaposlenici
+INSERT INTO user_roles (user_id, role_id)
+SELECT 
+    user_id,
+    (SELECT role_id FROM roles WHERE name = 'EMPLOYEE')
+FROM users
+WHERE username IN ('marko_dev', 'petra_dev', 'luka_dev', 'maja_design', 'tomislav_design');
 
 -- Deaktivirani korisnik (za testiranje)
-INSERT INTO users (username, email, password_hash, first_name, last_name, is_active) VALUES
-('inactive_user', 'inactive@company.hr', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G5FuIQ.Gu.sKyW', 'Inactive', 'User', FALSE);
+INSERT INTO user_roles (user_id, role_id)
+VALUES (
+    (SELECT user_id FROM users WHERE username = 'old_employee'),
+    (SELECT role_id FROM roles WHERE name = 'EMPLOYEE')
+);
 
 
--- POČETNI PODACI - USER_ROLES (Dodjela uloga)
--- Admin dobiva ADMIN ulogu
-INSERT INTO user_roles (user_id, role_id, assigned_by)
-SELECT u.user_id, r.role_id, u.user_id
-FROM users u, roles r
-WHERE u.username = 'admin' AND r.name = 'ADMIN';
-
--- Manageri dobivaju MANAGER ulogu
-INSERT INTO user_roles (user_id, role_id, assigned_by)
-SELECT u.user_id, r.role_id, (SELECT user_id FROM users WHERE username = 'admin')
-FROM users u, roles r
-WHERE u.username IN ('ivan_manager', 'ana_manager') AND r.name = 'MANAGER';
-
--- Zaposlenici dobivaju EMPLOYEE ulogu
-INSERT INTO user_roles (user_id, role_id, assigned_by)
-SELECT u.user_id, r.role_id, (SELECT user_id FROM users WHERE username = 'admin')
-FROM users u, roles r
-WHERE u.username IN ('marko_dev', 'petra_dev', 'luka_dev', 'maja_design', 'tomislav_design', 'inactive_user') 
-AND r.name = 'EMPLOYEE';
-
-
--- POČETNI PODACI - TASKS (Testni zadaci)
+-- POCETNI PODACI - TASKS (Testni zadaci)
 -- Zadaci od Ivan Horvat (Manager)
-INSERT INTO tasks (title, description, status, priority, due_date, created_by, assigned_to) VALUES
+INSERT INTO tasks (title, description, status, priority, due_date, created_by, assigned_to, created_at, completed_at) VALUES
 (
     'Implementacija login stranice',
     'Kreirati responzivnu login stranicu s validacijom forme i error handling-om',
@@ -156,7 +151,9 @@ INSERT INTO tasks (title, description, status, priority, due_date, created_by, a
     'HIGH',
     CURRENT_DATE + INTERVAL '7 days',
     (SELECT user_id FROM users WHERE username = 'ivan_manager'),
-    (SELECT user_id FROM users WHERE username = 'marko_dev')
+    (SELECT user_id FROM users WHERE username = 'marko_dev'),
+    CURRENT_TIMESTAMP,
+    NULL
 ),
 (
     'Postavljanje baze podataka',
@@ -165,7 +162,9 @@ INSERT INTO tasks (title, description, status, priority, due_date, created_by, a
     'URGENT',
     CURRENT_DATE - INTERVAL '2 days',
     (SELECT user_id FROM users WHERE username = 'ivan_manager'),
-    (SELECT user_id FROM users WHERE username = 'petra_dev')
+    (SELECT user_id FROM users WHERE username = 'petra_dev'),
+    CURRENT_TIMESTAMP - INTERVAL '2 days',
+    CURRENT_TIMESTAMP - INTERVAL '1 day'
 ),
 (
     'API dokumentacija',
@@ -174,7 +173,9 @@ INSERT INTO tasks (title, description, status, priority, due_date, created_by, a
     'MEDIUM',
     CURRENT_DATE + INTERVAL '14 days',
     (SELECT user_id FROM users WHERE username = 'ivan_manager'),
-    (SELECT user_id FROM users WHERE username = 'luka_dev')
+    (SELECT user_id FROM users WHERE username = 'luka_dev'),
+    CURRENT_TIMESTAMP,
+    NULL
 ),
 (
     'Code review - autentikacija',
@@ -183,16 +184,13 @@ INSERT INTO tasks (title, description, status, priority, due_date, created_by, a
     'MEDIUM',
     NULL,
     (SELECT user_id FROM users WHERE username = 'ivan_manager'),
+    NULL,
+    CURRENT_TIMESTAMP,
     NULL
 );
 
--- Ažuriraj completed_at za završeni zadatak
-UPDATE tasks 
-SET completed_at = CURRENT_TIMESTAMP - INTERVAL '1 day'
-WHERE title = 'Postavljanje baze podataka';
-
--- Zadaci od Ana Kovač (Manager)
-INSERT INTO tasks (title, description, status, priority, due_date, created_by, assigned_to) VALUES
+-- Zadaci od Ana Kovac (Manager)
+INSERT INTO tasks (title, description, status, priority, due_date, created_by, assigned_to, created_at, completed_at) VALUES
 (
     'Dizajn dashboard-a',
     'Kreirati wireframe i mockup za glavni dashboard korisnika',
@@ -200,16 +198,20 @@ INSERT INTO tasks (title, description, status, priority, due_date, created_by, a
     'HIGH',
     CURRENT_DATE + INTERVAL '5 days',
     (SELECT user_id FROM users WHERE username = 'ana_manager'),
-    (SELECT user_id FROM users WHERE username = 'maja_design')
+    (SELECT user_id FROM users WHERE username = 'maja_design'),
+    CURRENT_TIMESTAMP,
+    NULL
 ),
 (
     'Logo redesign',
-    'Osvježiti logotip tvrtke prema novim brand smjernicama',
+    'Osvjeziti logotip tvrtke prema novim brand smjernicama',
     'NEW',
     'LOW',
     CURRENT_DATE + INTERVAL '30 days',
     (SELECT user_id FROM users WHERE username = 'ana_manager'),
-    (SELECT user_id FROM users WHERE username = 'tomislav_design')
+    (SELECT user_id FROM users WHERE username = 'tomislav_design'),
+    CURRENT_TIMESTAMP,
+    NULL
 ),
 (
     'UI komponente',
@@ -218,51 +220,50 @@ INSERT INTO tasks (title, description, status, priority, due_date, created_by, a
     'MEDIUM',
     CURRENT_DATE + INTERVAL '10 days',
     (SELECT user_id FROM users WHERE username = 'ana_manager'),
-    (SELECT user_id FROM users WHERE username = 'maja_design')
+    (SELECT user_id FROM users WHERE username = 'maja_design'),
+    CURRENT_TIMESTAMP,
+    NULL
 );
 
 
--- POČETNI PODACI - LOGIN_EVENTS (Primjer prijava)
--- Uspješne prijave
-INSERT INTO login_events (user_id, username_attempted, ip_address, user_agent, success) VALUES
-((SELECT user_id FROM users WHERE username = 'admin'), 'admin', '192.168.1.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0', TRUE),
-((SELECT user_id FROM users WHERE username = 'ivan_manager'), 'ivan_manager', '192.168.1.10', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/121.0', TRUE),
-((SELECT user_id FROM users WHERE username = 'marko_dev'), 'marko_dev', '192.168.1.20', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/17.0', TRUE);
+-- POCETNI PODACI - LOGIN_EVENTS (Testni login eventi)
+-- Uspjesne prijave
+INSERT INTO login_events (user_id, username_attempted, login_time, ip_address, user_agent, success) VALUES
+((SELECT user_id FROM users WHERE username = 'admin'), 'admin', CURRENT_TIMESTAMP - INTERVAL '2 hours', '192.168.1.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', TRUE),
+((SELECT user_id FROM users WHERE username = 'ivan_manager'), 'ivan_manager', CURRENT_TIMESTAMP - INTERVAL '1 hour', '192.168.1.5', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', TRUE),
+((SELECT user_id FROM users WHERE username = 'marko_dev'), 'marko_dev', CURRENT_TIMESTAMP - INTERVAL '30 minutes', '192.168.1.10', 'Mozilla/5.0 (X11; Linux x86_64)', TRUE);
 
--- Neuspješne prijave
-INSERT INTO login_events (user_id, username_attempted, ip_address, user_agent, success, failure_reason) VALUES
-((SELECT user_id FROM users WHERE username = 'admin'), 'admin', '192.168.1.100', 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0', FALSE, 'INVALID_CREDENTIALS'),
-(NULL, 'nonexistent_user', '10.0.0.50', 'curl/7.81.0', FALSE, 'INVALID_CREDENTIALS'),
-((SELECT user_id FROM users WHERE username = 'inactive_user'), 'inactive_user', '192.168.1.55', 'Mozilla/5.0 Firefox/121.0', FALSE, 'ACCOUNT_INACTIVE');
+-- Neuspjesne prijave (pogresna lozinka)
+INSERT INTO login_events (user_id, username_attempted, login_time, ip_address, user_agent, success, failure_reason) VALUES
+((SELECT user_id FROM users WHERE username = 'admin'), 'admin', CURRENT_TIMESTAMP - INTERVAL '3 hours', '192.168.1.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', FALSE, 'INVALID_CREDENTIALS'),
+(NULL, 'nonexistent_user', CURRENT_TIMESTAMP - INTERVAL '1 hour 30 minutes', '203.0.113.42', 'curl/7.68.0', FALSE, 'INVALID_CREDENTIALS');
+
+-- Pokusaj prijave na deaktivirani racun
+INSERT INTO login_events (user_id, username_attempted, login_time, ip_address, user_agent, success, failure_reason) VALUES
+((SELECT user_id FROM users WHERE username = 'old_employee'), 'old_employee', CURRENT_TIMESTAMP - INTERVAL '45 minutes', '192.168.1.20', 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6)', FALSE, 'ACCOUNT_INACTIVE');
 
 
+-- POCETNI PODACI - AUDIT_LOG (Testni audit zapisi)
+-- Audit za kreiranje admin korisnika
+INSERT INTO audit_log (changed_by, action, entity_name, entity_id, old_value, new_value, ip_address) VALUES
+((SELECT user_id FROM users WHERE username = 'admin'), 'INSERT', 'users', 1, NULL, '{"username":"admin","email":"admin@example.com"}', '192.168.1.1');
 
--- VERIFIKACIJA PODATAKA
-DO $$
-DECLARE
-    v_users_count INTEGER;
-    v_roles_count INTEGER;
-    v_permissions_count INTEGER;
-    v_tasks_count INTEGER;
-BEGIN
-    SELECT COUNT(*) INTO v_users_count FROM users;
-    SELECT COUNT(*) INTO v_roles_count FROM roles;
-    SELECT COUNT(*) INTO v_permissions_count FROM permissions;
-    SELECT COUNT(*) INTO v_tasks_count FROM tasks;
-    
-    RAISE NOTICE '============================================================';
-    RAISE NOTICE 'FAZA 4 - Početni podaci uspješno uneseni!';
-    RAISE NOTICE '============================================================';
-    RAISE NOTICE 'Statistika:';
-    RAISE NOTICE '  - Korisnika: %', v_users_count;
-    RAISE NOTICE '  - Uloga: %', v_roles_count;
-    RAISE NOTICE '  - Prava: %', v_permissions_count;
-    RAISE NOTICE '  - Zadataka: %', v_tasks_count;
-    RAISE NOTICE '============================================================';
-    RAISE NOTICE 'Testni korisnici (lozinka za sve: Password123!):';
-    RAISE NOTICE '  - admin (Administrator)';
-    RAISE NOTICE '  - ivan_manager, ana_manager (Manageri)';
-    RAISE NOTICE '  - marko_dev, petra_dev, luka_dev (Zaposlenici - tim Ivan)';
-    RAISE NOTICE '  - maja_design, tomislav_design (Zaposlenici - tim Ana)';
-    RAISE NOTICE '============================================================';
-END $$;
+-- Audit za kreiranje zadatka
+INSERT INTO audit_log (changed_by, action, entity_name, entity_id, old_value, new_value, ip_address) VALUES
+((SELECT user_id FROM users WHERE username = 'ivan_manager'), 'INSERT', 'tasks', 1, NULL, '{"title":"Implementacija login stranice","status":"IN_PROGRESS","priority":"HIGH"}', '192.168.1.5');
+
+-- Audit za azuriranje zadatka
+INSERT INTO audit_log (changed_by, action, entity_name, entity_id, old_value, new_value, ip_address) VALUES
+((SELECT user_id FROM users WHERE username = 'petra_dev'), 'UPDATE', 'tasks', 2, '{"status":"IN_PROGRESS"}', '{"status":"COMPLETED","completed_at":"2025-12-22"}', '192.168.1.12');
+
+-- Audit za deaktivaciju korisnika
+INSERT INTO audit_log (changed_by, action, entity_name, entity_id, old_value, new_value, ip_address) VALUES
+((SELECT user_id FROM users WHERE username = 'admin'), 'UPDATE', 'users', 13, '{"is_active":true}', '{"is_active":false}', '192.168.1.1');
+
+-- Audit za dodjeljivanje uloge  
+INSERT INTO audit_log (changed_by, action, entity_name, entity_id, old_value, new_value, ip_address) VALUES
+((SELECT user_id FROM users WHERE username = 'admin'), 'INSERT', 'user_roles', 1, NULL, '{"user_id":2,"role_id":3}', '192.168.1.1');
+
+-- Audit za brisanje zadatka (simulacija - zadatak nije stvarno obrisan)
+INSERT INTO audit_log (changed_by, action, entity_name, entity_id, old_value, new_value, ip_address) VALUES
+((SELECT user_id FROM users WHERE username = 'ivan_manager'), 'DELETE', 'tasks', 9999, '{"title":"Stari zadatak","status":"CANCELLED"}', NULL, '192.168.1.5');

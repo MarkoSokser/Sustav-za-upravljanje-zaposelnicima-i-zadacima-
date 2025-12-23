@@ -82,14 +82,14 @@ CREATE TABLE users (
 
 COMMENT ON TABLE users IS 'Korisnici sustava - zaposlenici organizacije';
 COMMENT ON COLUMN users.user_id IS 'Jedinstveni identifikator korisnika';
-COMMENT ON COLUMN users.username IS 'Korisničko ime za prijavu (jedinstveno)';
+COMMENT ON COLUMN users.username IS 'Korisnicko ime za prijavu (jedinstveno)';
 COMMENT ON COLUMN users.email IS 'E-mail adresa korisnika (jedinstvena)';
 COMMENT ON COLUMN users.password_hash IS 'Hash lozinke (bcrypt)';
 COMMENT ON COLUMN users.first_name IS 'Ime korisnika';
 COMMENT ON COLUMN users.last_name IS 'Prezime korisnika';
-COMMENT ON COLUMN users.manager_id IS 'ID nadređenog managera (hijerarhija tima)';
-COMMENT ON COLUMN users.is_active IS 'Status računa (TRUE=aktivan, FALSE=deaktiviran)';
-COMMENT ON COLUMN users.created_at IS 'Datum i vrijeme kreiranja računa';
+COMMENT ON COLUMN users.manager_id IS 'ID nadjredjenog managera (hijerarhija tima)';
+COMMENT ON COLUMN users.is_active IS 'Status racuna (TRUE=aktivan, FALSE=deaktiviran)';
+COMMENT ON COLUMN users.created_at IS 'Datum i vrijeme kreiranja racuna';
 COMMENT ON COLUMN users.updated_at IS 'Datum i vrijeme zadnje izmjene';
 
 
@@ -129,10 +129,10 @@ CREATE TABLE permissions (
     CONSTRAINT chk_permissions_category CHECK (category IN ('USER', 'ROLE', 'TASK', 'AUDIT'))
 );
 
-COMMENT ON TABLE permissions IS 'Pojedinačna prava pristupa funkcionalnostima';
+COMMENT ON TABLE permissions IS 'Pojedinacna prava pristupa funkcionalnostima';
 COMMENT ON COLUMN permissions.permission_id IS 'Jedinstveni identifikator prava';
 COMMENT ON COLUMN permissions.code IS 'Jedinstveni kod prava (npr. TASK_CREATE)';
-COMMENT ON COLUMN permissions.name IS 'Čitljiv naziv prava';
+COMMENT ON COLUMN permissions.name IS 'Citljiv naziv prava';
 COMMENT ON COLUMN permissions.description IS 'Detaljan opis prava';
 COMMENT ON COLUMN permissions.category IS 'Kategorija prava (USER, ROLE, TASK, AUDIT)';
 
@@ -169,10 +169,10 @@ COMMENT ON COLUMN tasks.title IS 'Naziv zadatka';
 COMMENT ON COLUMN tasks.description IS 'Detaljan opis zadatka';
 COMMENT ON COLUMN tasks.status IS 'Status zadatka (NEW, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED)';
 COMMENT ON COLUMN tasks.priority IS 'Prioritet zadatka (LOW, MEDIUM, HIGH, URGENT)';
-COMMENT ON COLUMN tasks.due_date IS 'Rok završetka zadatka';
+COMMENT ON COLUMN tasks.due_date IS 'Rok zavr\u0161etka zadatka';
 COMMENT ON COLUMN tasks.created_by IS 'ID korisnika koji je kreirao zadatak';
 COMMENT ON COLUMN tasks.assigned_to IS 'ID korisnika kojem je zadatak dodijeljen';
-COMMENT ON COLUMN tasks.completed_at IS 'Datum i vrijeme završetka zadatka';
+COMMENT ON COLUMN tasks.completed_at IS 'Datum i vrijeme zavr\u0161etka zadatka';
 
 
 
@@ -182,7 +182,7 @@ CREATE TABLE user_roles (
     user_id INTEGER NOT NULL,
     role_id INTEGER NOT NULL,
     assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    assigned_by INTEGER NOT NULL,
+    assigned_by INTEGER,
     
     
     CONSTRAINT fk_user_roles_user FOREIGN KEY (user_id) 
@@ -242,14 +242,14 @@ CREATE TABLE login_events (
     )
 );
 
-COMMENT ON TABLE login_events IS 'Evidencija pokušaja prijave u sustav';
+COMMENT ON TABLE login_events IS 'Evidencija pokusaja prijave u sustav';
 COMMENT ON COLUMN login_events.login_event_id IS 'Jedinstveni identifikator prijave';
 COMMENT ON COLUMN login_events.user_id IS 'ID korisnika (NULL ako korisnik ne postoji)';
-COMMENT ON COLUMN login_events.username_attempted IS 'Korisničko ime korišteno pri prijavi';
-COMMENT ON COLUMN login_events.login_time IS 'Vrijeme pokušaja prijave';
+COMMENT ON COLUMN login_events.username_attempted IS 'Korisnicko ime koristeno pri prijavi';
+COMMENT ON COLUMN login_events.login_time IS 'Vrijeme pokusaja prijave';
 COMMENT ON COLUMN login_events.ip_address IS 'IP adresa klijenta';
 COMMENT ON COLUMN login_events.user_agent IS 'Informacije o pregledniku/klijentu';
-COMMENT ON COLUMN login_events.success IS 'Uspješnost prijave (TRUE/FALSE)';
+COMMENT ON COLUMN login_events.success IS 'Uspjesnost prijave (TRUE/FALSE)';
 COMMENT ON COLUMN login_events.failure_reason IS 'Razlog neuspjeha (INVALID_CREDENTIALS, ACCOUNT_INACTIVE, ACCOUNT_LOCKED)';
 
 
@@ -454,4 +454,4 @@ LEFT JOIN roles r ON ur.role_id = r.role_id
 GROUP BY m.user_id, m.username, m.first_name, m.last_name,
          e.user_id, e.username, e.first_name, e.last_name, e.email, e.is_active;
 
-COMMENT ON VIEW v_manager_team IS 'Pregled članova tima za svakog managera';
+COMMENT ON VIEW v_manager_team IS 'Pregled clanova tima za svakog managera';
