@@ -1,6 +1,6 @@
 
 -- Interni sustav za upravljanje zaposlenicima i zadacima
--- PostgreSQL 14+
+-- PostgreSQL 15+
 
 DROP SCHEMA IF EXISTS employee_management CASCADE;
 
