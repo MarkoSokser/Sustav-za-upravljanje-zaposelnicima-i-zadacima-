@@ -652,90 +652,141 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 ### 3.5.1 Tekstualni prikaz odnosa
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                              ER DIJAGRAM                                  │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│                         ┌───────────────┐                                │
-│                         │   Permission  │                                │
-│                         │───────────────│                                │
-│                         │ permission_id │                                │
-│                         │ code          │                                │
-│                         │ name          │                                │
-│                         │ category      │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ M                                      │
-│                                 │                                        │
-│                         ┌───────┴───────┐                                │
-│                         │RolePermission │                                │
-│                         │───────────────│                                │
-│                         │ role_id (FK)  │                                │
-│                         │ permission_id │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ M                                      │
-│                                 │                                        │
-│ ┌───────────────┐       ┌───────┴───────┐       ┌───────────────┐        │
-│ │   LoginEvent  │       │     Role      │       │   AuditLog    │        │
-│ │───────────────│       │───────────────│       │───────────────│        │
-│ │ login_event_id│       │ role_id       │       │ audit_log_id  │        │
-│ │ user_id (FK)  │       │ name          │       │ entity_name   │        │
-│ │ login_time    │       │ description   │       │ entity_id     │        │
-│ │ ip_address    │       │ is_system     │       │ action        │        │
-│ │ success       │       └───────┬───────┘       │ changed_by(FK)│        │
-│ └───────┬───────┘               │               └───────┬───────┘        │
-│         │                       │ M                     │                │
-│         │ M                     │                       │ M              │
-│         │               ┌───────┴───────┐               │                │
-│         │               │   UserRole    │               │                │
-│         │               │───────────────│               │                │
-│         │               │ user_id (FK)  │               │                │
-│         │               │ role_id (FK)  │               │                │
-│         │               │ assigned_by   │               │                │
-│         │               └───────┬───────┘               │                │
-│         │                       │ M                     │                │
-│         │                       │                       │                │
-│         │               ┌───────┴───────┐               │                │
-│         └──────────────►│     User      │◄──────────────┘                │
-│                         │───────────────│                                │
-│                         │ user_id       │◄──────┐                        │
-│                         │ username      │       │                        │
-│                         │ email         │       │ manager_id             │
-│                         │ first_name    │       │ (self-reference)       │
-│                         │ last_name     │       │                        │
-│                         │ manager_id(FK)│───────┘                        │
-│                         │ is_active     │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ 1                                      │
-│                                 │                                        │
-│                         ┌───────┴───────┐                                │
-│                         │     Task      │                                │
-│                         │───────────────│                                │
-│                         │ task_id       │                                │
-│                         │ title         │                                │
-│                         │ status        │                                │
-│                         │ priority      │                                │
-│                         │ created_by(FK)│                                │
-│                         │ assigned_to   │                                │
-│                         │ due_date      │                                │
-│                         └───────────────┘                                │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                                ER DIJAGRAM                                        │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│                         ┌───────────────────────────┐                            │
+│                         │      Permission           │                            │
+│                         │───────────────────────────│                            │
+│                         │ permission_id  SER  PK    │                            │
+│                         │ code           VC(50)     │                            │
+│                         │ name           VC(100)    │                            │
+│                         │ description    TXT        │                            │
+│                         │ category       VC(50)     │                            │
+│                         │ created_at     TS         │                            │
+│                         └──────────┬────────────────┘                            │
+│                                    │                                             │
+│                                    │ M                                           │
+│                                    │                                             │
+│                         ┌──────────┴────────────────┐                            │
+│                         │    RolePermission         │                            │
+│                         │───────────────────────────│                            │
+│                         │ role_permission_id SER PK │                            │
+│                         │ role_id         INT  FK   │                            │
+│                         │ permission_id   INT  FK   │                            │
+│                         │ assigned_at     TS        │                            │
+│                         └──────────┬────────────────┘                            │
+│                                    │                                             │
+│                                    │ M                                           │
+│                                    │                                             │
+│ ┌───────────────────────┐  ┌───────┴────────────┐  ┌──────────────────────────┐  │
+│ │    LoginEvent         │  │       Role         │  │       AuditLog           │  │
+│ │───────────────────────│  │────────────────────│  │──────────────────────────│  │
+│ │ login_event_id SER PK │  │ role_id     SER PK │  │ audit_log_id    SER  PK  │  │
+│ │ user_id        INT FK │  │ name        VC(50) │  │ entity_name     VC(50)   │  │
+│ │ username_atmp  VC(50) │  │ description TXT    │  │ entity_id       INT      │  │
+│ │ login_time     TS     │  │ is_system   BOOL   │  │ action          ENUM     │  │
+│ │ ip_address     INET   │  │ created_at  TS     │  │ changed_by      INT  FK  │  │
+│ │ user_agent     TXT    │  │ updated_at  TS     │  │ changed_at      TS       │  │
+│ │ success        BOOL   │  └─────────┬──────────┘  │ old_value       JSON     │  │
+│ │ failure_reason VC(100)│            │             │ new_value       JSON     │  │
+│ └───────┬───────────────┘            │ M           │ ip_address      INET     │  │
+│         │                            │             └──────────┬───────────────┘  │
+│         │ M                  ┌───────┴───────┐              │                   │
+│         │                    │   UserRole    │              │ M                 │
+│         │                    │───────────────│              │                   │
+│         │                    │ user_role_id  │              │                   │
+│         │                    │         SER PK│              │                   │
+│         │                    │ user_id INT FK│              │                   │
+│         │                    │ role_id INT FK│              │                   │
+│         │                    │ assigned_at TS│              │                   │
+│         │                    │ assigned_by   │              │                   │
+│         │                    │         INT FK│              │                   │
+│         │                    └───────┬───────┘              │                   │
+│         │                            │ M                    │                   │
+│         │                            │                      │                   │
+│         │                    ┌───────┴────────────┐         │                   │
+│         └───────────────────►│       User         │◄────────┘                   │
+│                              │────────────────────│                             │
+│                              │ user_id       SER  │◄─────┐                      │
+│                              │            PK      │      │                      │
+│                              │ username    VC(50) │      │                      │
+│                              │ email       VC(100)│      │ manager_id           │
+│                              │ password_hash      │      │ (self-reference)     │
+│                              │            VC(255) │      │                      │
+│                              │ first_name  VC(50) │      │                      │
+│                              │ last_name   VC(50) │      │                      │
+│                              │ manager_id  INT FK │──────┘                      │
+│                              │ is_active   BOOL   │                             │
+│                              │ created_at  TS     │                             │
+│                              │ updated_at  TS     │                             │
+│                              └──────────┬─────────┘                             │
+│                                         │                                       │
+│                                         │ 1                                     │
+│                                         │                                       │
+│                              ┌──────────┴─────────────┐                         │
+│                              │        Task            │                         │
+│                              │────────────────────────│                         │
+│                              │ task_id       SER  PK  │                         │
+│                              │ title         VC(200)  │                         │
+│                              │ description   TXT      │                         │
+│                              │ status        ENUM     │                         │
+│                              │ priority      ENUM     │                         │
+│                              │ due_date      DT       │                         │
+│                              │ created_by    INT  FK  │                         │
+│                              │ assigned_to   INT  FK  │                         │
+│                              │ created_at    TS       │                         │
+│                              │ updated_at    TS       │                         │
+│                              │ completed_at  TS       │                         │
+│                              └────────────────────────┘                         │
+│                                                                                  │
+│  Legenda tipova:                                                                │
+│  SER = SERIAL | INT = INTEGER | VC = VARCHAR | TXT = TEXT | BOOL = BOOLEAN     │
+│  TS = TIMESTAMP | DT = DATE | INET = IP adresa | JSON = JSONB | ENUM = tip      │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
+![ERA model](/images/ERA.png)
+*Figure 1: ERA dijagram *
+
 
 ### 3.5.2 Tablica kardinalnosti
+
+**Odnosi višeg nivoa (kroz povezne entitete):**
 
 | Odnos | Tip | Opis |
 |-------|-----|------|
 | User ↔ Role | M:N | Korisnik može imati više uloga; uloga može pripadati više korisnika (preko UserRole) |
 | Role ↔ Permission | M:N | Uloga može imati više prava; pravo može pripadati više uloga (preko RolePermission) |
-| User ↔ Task (created_by) | 1:N | Jedan korisnik može kreirati više zadataka |
-| User ↔ Task (assigned_to) | 1:N | Jednom korisniku može biti dodijeljeno više zadataka |
-| User ↔ User (manager_id) | 1:N | Jedan manager može imati više podređenih zaposlenika |
-| User ↔ LoginEvent | 1:N | Jedan korisnik ima više prijava |
-| User ↔ AuditLog | 1:N | Jedan korisnik može uzrokovati više audit zapisa |
+
+**Direktni odnosi:**
+
+| Entitet 1 | Veza | Entitet 2 | Kardinalnost | Opis |
+|-----------|------|-----------|--------------|------|
+| **User** | manager_id | **User** | 1:N | Jedan manager (User) može imati više podređenih zaposlenika (User) |
+| **User** | created_by | **Task** | 1:N | Jedan korisnik može kreirati više zadataka |
+| **User** | assigned_to | **Task** | 1:N | Jednom korisniku može biti dodijeljeno više zadataka |
+| **User** | user_id | **LoginEvent** | 1:N | Jedan korisnik može imati više evidencija prijava |
+| **User** | changed_by | **AuditLog** | 1:N | Jedan korisnik može biti odgovoran za više audit zapisa |
+| **User** | assigned_by | **UserRole** | 1:N | Jedan korisnik može dodijeliti uloge više puta |
+| **User** | user_id | **UserRole** | 1:N | Jednom korisniku može biti dodijeljeno više uloga (preko više zapisa) |
+| **Role** | role_id | **UserRole** | 1:N | Jedna uloga može biti dodijeljena više korisnika (preko više zapisa) |
+| **Role** | role_id | **RolePermission** | 1:N | Jedna uloga može imati više prava (preko više zapisa) |
+| **Permission** | permission_id | **RolePermission** | 1:N | Jedno pravo može pripadati više uloga (preko više zapisa) |
+
+**Sažetak svih entiteta i njihovih odnosa:**
+
+| Entitet | Broj izlaznih veza | Broj ulaznih veza | Ukupno odnosa |
+|---------|-------------------|-------------------|---------------|
+| **User** | 5 (manager_id, created_by, assigned_to, changed_by, assigned_by) | 3 (user_id iz UserRole, LoginEvent, AuditLog) | 8 |
+| **Role** | 2 (role_id u UserRole, RolePermission) | 1 (role_id iz UserRole) | 3 |
+| **Permission** | 1 (permission_id u RolePermission) | 1 (permission_id iz RolePermission) | 2 |
+| **Task** | 0 | 2 (created_by, assigned_to) | 2 |
+| **UserRole** | 0 | 3 (user_id, role_id, assigned_by) | 3 |
+| **RolePermission** | 0 | 2 (role_id, permission_id) | 2 |
+| **LoginEvent** | 0 | 1 (user_id) | 1 |
+| **AuditLog** | 0 | 1 (changed_by) | 1 |
 
 ---
 
@@ -789,27 +840,8 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 
 ---
 
-## 3.8 Dijagram - smjernice za izradu
 
-### Preporučeni alati
-- **draw.io** (diagrams.net) – besplatan, online
-- **Lucidchart** – profesionalni alat
-- **DbDiagram.io** – specifičan za baze podataka
-- **PlantUML** – tekstualni opis dijagrama
 
-### Elementi za uključiti
-1. Sve entitete kao pravokutnike s atributima
-2. Primarne ključeve označene (PK)
-3. Strane ključeve označene (FK)
-4. Linije odnosa s kardinalnostima (1, M, N)
-5. ENUM tipove kao zasebne elemente
-6. Grupiranje po domenama (User Management, Task Management, Audit)
 
-### Format izvoza
-- PNG (za dokumentaciju)
-- SVG (za skalabilnost)
-- PDF (za prezentacije)
-
----
 
 
