@@ -332,7 +332,7 @@ WHERE manager_username = 'ivan_manager';
 
 ## 4.7 Početni podaci
 
-### 4.7.1 Prava pristupa (26 prava)
+### 4.7.1 Prava pristupa (24 prava)
 
 | Kategorija | Broj prava | Primjeri |
 |------------|-----------|----------|
@@ -345,7 +345,7 @@ WHERE manager_username = 'ivan_manager';
 
 | Uloga | Broj prava | Opis |
 |-------|-----------|------|
-| ADMIN | 26 | Sva prava |
+| ADMIN | 24 | Sva prava |
 | MANAGER | 12 | Upravljanje timom i zadacima |
 | EMPLOYEE | 5 | Vlastiti podaci i zadaci |
 

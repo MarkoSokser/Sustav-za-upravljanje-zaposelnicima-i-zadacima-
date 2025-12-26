@@ -1,4 +1,3 @@
-
 SET search_path TO employee_management;
 
 
@@ -36,9 +35,9 @@ COMMENT ON FUNCTION generate_slug(TEXT) IS 'Generira URL-friendly slug od teksta
 CREATE OR REPLACE FUNCTION check_password_strength(password TEXT)
 RETURNS TABLE(is_valid BOOLEAN, message TEXT) AS $$
 BEGIN
-    -- Minimalno 8 karaktera
+    -- Minimalno 8 znakova
     IF LENGTH(password) < 8 THEN
-        RETURN QUERY SELECT FALSE, 'Lozinka mora imati minimalno 8 karaktera';
+        RETURN QUERY SELECT FALSE, 'Lozinka mora imati minimalno 8 znakova';
         RETURN;
     END IF;
     
@@ -60,7 +59,7 @@ BEGIN
         RETURN;
     END IF;
     
-    -- Mora sadrzavati specijalni karakter
+    -- Mora sadrzavati specijalni znak
     IF password !~ '[!@#$%^&*(),.?":{}|<>]' THEN
         RETURN QUERY SELECT FALSE, 'Lozinka mora sadrzavati barem jedan specijalni karakter';
         RETURN;
@@ -184,7 +183,7 @@ BEGIN
     RETURN QUERY
     SELECT 
         u.user_id,
-        u.username,
+        u.username::VARCHAR(50),
         u.first_name || ' ' || u.last_name AS full_name,
         u.email::VARCHAR(255),
         u.is_active
@@ -649,7 +648,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         INSERT INTO audit_log (entity_name, entity_id, action, changed_by, new_value)
-        VALUES ('users', NEW.user_id, 'INSERT', NEW.user_id, 
+        VALUES ('users', NEW.user_id, 'INSERT', NULL,  -- NULL jer korisnik tek nastaje
             jsonb_build_object(
                 'username', NEW.username,
                 'email', NEW.email,
@@ -663,7 +662,7 @@ BEGIN
         -- Samo loguj ako je doslo do stvarne promjene
         IF OLD.* IS DISTINCT FROM NEW.* THEN
             INSERT INTO audit_log (entity_name, entity_id, action, changed_by, old_value, new_value)
-            VALUES ('users', NEW.user_id, 'UPDATE', NEW.user_id,
+            VALUES ('users', NEW.user_id, 'UPDATE', NULL,  -- NULL jer ne znamo tko je napravio promjenu
                 jsonb_build_object(
                     'username', OLD.username,
                     'email', OLD.email,
@@ -683,7 +682,7 @@ BEGIN
         RETURN NEW;
     ELSIF TG_OP = 'DELETE' THEN
         INSERT INTO audit_log (entity_name, entity_id, action, changed_by, old_value)
-        VALUES ('users', OLD.user_id, 'DELETE', OLD.user_id,
+        VALUES ('users', OLD.user_id, 'DELETE', NULL,  -- NULL jer korisnik se brise
             jsonb_build_object(
                 'username', OLD.username,
                 'email', OLD.email,
@@ -778,12 +777,13 @@ BEGIN
         SELECT username INTO v_username FROM users WHERE user_id = NEW.user_id;
         
         INSERT INTO audit_log (entity_name, entity_id, action, changed_by, new_value)
-        VALUES ('user_roles', NEW.user_role_id, 'INSERT', NEW.assigned_by,
+        VALUES ('user_roles', NEW.user_role_id, 'INSERT', NULL,  -- NULL za sigurnost
             jsonb_build_object(
                 'user_id', NEW.user_id,
                 'username', v_username,
                 'role_id', NEW.role_id,
-                'role_name', v_role_name
+                'role_name', v_role_name,
+                'assigned_by', NEW.assigned_by
             )
         );
         RETURN NEW;
@@ -792,12 +792,13 @@ BEGIN
         SELECT username INTO v_username FROM users WHERE user_id = OLD.user_id;
         
         INSERT INTO audit_log (entity_name, entity_id, action, changed_by, old_value)
-        VALUES ('user_roles', OLD.user_role_id, 'DELETE', OLD.assigned_by,
+        VALUES ('user_roles', OLD.user_role_id, 'DELETE', NULL,  -- NULL za sigurnost
             jsonb_build_object(
                 'user_id', OLD.user_id,
                 'username', v_username,
                 'role_id', OLD.role_id,
-                'role_name', v_role_name
+                'role_name', v_role_name,
+                'assigned_by', OLD.assigned_by
             )
         );
         RETURN OLD;

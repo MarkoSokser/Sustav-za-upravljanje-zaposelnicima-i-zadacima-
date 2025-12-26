@@ -223,6 +223,8 @@ CALL revoke_role(4, 'MANAGER', 1);
 | `trg_audit_tasks` | tasks | INSERT, UPDATE, DELETE | Loguje sve promjene zadataka |
 | `trg_audit_user_roles` | user_roles | INSERT, DELETE | Loguje dodjelu/uklanjanje uloga |
 
+**Napomena:** Audit triggeri koriste `changed_by = NULL` kako bi izbjegli FK constraint probleme prilikom brisanja korisnika. Informacija o tome tko je napravio promjenu može se pohraniti u `new_value`/`old_value` JSONB poljima.
+
 **Format audit zapisa:**
 ```json
 {

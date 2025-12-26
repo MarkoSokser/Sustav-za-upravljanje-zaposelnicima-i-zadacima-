@@ -169,7 +169,7 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 |------------|:-----:|:-------:|:--------:|
 | **Upravljanje korisnicima** ||||
 | USER_CREATE | ✅ | ❌ | ❌ |
-| USER_READ_ALL | ✅ | ❌ | ❌ |
+| USER_READ_ALL | ✅ | ✅ | ❌ |
 | USER_READ_TEAM | ✅ | ✅ | ❌ |
 | USER_READ_SELF | ✅ | ✅ | ✅ |
 | USER_UPDATE_ALL | ✅ | ❌ | ❌ |
@@ -185,11 +185,11 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 | **Upravljanje zadacima** ||||
 | TASK_CREATE | ✅ | ✅ | ❌ |
 | TASK_ASSIGN | ✅ | ✅ | ❌ |
-| TASK_READ_ALL | ✅ | ❌ | ❌ |
+| TASK_READ_ALL | ✅ | ✅ | ❌ |
 | TASK_READ_TEAM | ✅ | ✅ | ❌ |
-| TASK_READ_SELF | ✅ | ✅ | ✅ |
+| TASK_READ_SELF | ✅ | ❌ | ✅ |
 | TASK_UPDATE_ANY | ✅ | ✅ | ❌ |
-| TASK_UPDATE_SELF_STATUS | ✅ | ✅ | ✅ |
+| TASK_UPDATE_SELF_STATUS | ✅ | ❌ | ✅ |
 | TASK_DELETE | ✅ | ✅ | ❌ |
 | **Audit i meta-podaci** ||||
 | AUDIT_READ_ALL | ✅ | ❌ | ❌ |
