@@ -31,18 +31,18 @@ Provjerava jacinu lozinke prema sigurnosnim kriterijima.
 
 ```sql
 SELECT * FROM check_password_strength('Weak');
--- is_valid: FALSE, message: 'Lozinka mora imati minimalno 8 karaktera'
+-- is_valid: FALSE, message: 'Lozinka mora imati minimalno 8 znakova'
 
 SELECT * FROM check_password_strength('Strong@Pass123');
--- is_valid: TRUE, message: 'Lozinka zadovoljava sve kriterije'
+-- is_valid: TRUE, message: 'Lozinka zadovoljava sve znakove'
 ```
 
 **Kriteriji:**
-- Minimalno 8 karaktera
+- Minimalno 8 znakova
 - Barem jedno veliko slovo
 - Barem jedno malo slovo
 - Barem jedan broj
-- Barem jedan specijalni karakter
+- Barem jedan specijalni znak
 
 ---
 

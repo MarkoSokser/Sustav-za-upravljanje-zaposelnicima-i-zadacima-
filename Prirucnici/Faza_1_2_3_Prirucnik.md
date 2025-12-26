@@ -86,7 +86,7 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 ### Pouzdanost
 - Integritet podataka osigurava se ograničenjima baze podataka.
 - Sve kritične operacije izvršavaju se unutar transakcija.
-- Sustav mora biti dostupan 99% vremena.
+
 
 ### Održivost
 - Sustav je modularan i lako proširiv.
@@ -98,9 +98,7 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 - Audit zapisi uključuju podatke o korisniku koji je izvršio promjenu.
 - Audit zapisi su nepromjenjivi (samo unos, bez izmjena ili brisanja).
 
-### Performanse
-- Vrijeme odgovora API-ja ne smije prelaziti 500ms za standardne operacije.
-- Sustav mora podržavati najmanje 100 istovremenih korisnika.
+
 
 ---
 
@@ -240,48 +238,6 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 - Ažuriranje statusa vlastitih zadataka
 - Pregled i uređivanje vlastitog profila
 - Pregled vlastitih prijava u sustav
-
----
-
-## 1.10 Dijagram slučajeva korištenja (Use Case)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SUSTAV ZA UPRAVLJANJE                        │
-│                ZAPOSLENICIMA I ZADACIMA                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────┐                                                   │
-│  │  ADMIN   │──── Upravljanje korisnicima                       │
-│  │          │──── Upravljanje ulogama                           │
-│  │          │──── Upravljanje pravima                           │
-│  │          │──── Pregled svih zadataka                         │
-│  │          │──── Pregled audit zapisa                          │
-│  └──────────┘                                                   │
-│                                                                 │
-│  ┌──────────┐                                                   │
-│  │ MANAGER  │──── Kreiranje zadataka                            │
-│  │          │──── Dodjela zadataka                              │
-│  │          │──── Pregled tima                                  │
-│  │          │──── Uređivanje profila                            │
-│  └──────────┘                                                   │
-│                                                                 │
-│  ┌──────────┐                                                   │
-│  │ EMPLOYEE │──── Pregled zadataka                              │
-│  │          │──── Ažuriranje statusa                            │
-│  │          │──── Uređivanje profila                            │
-│  └──────────┘                                                   │
-│                                                                 │
-│  ┌──────────────────────────────────────────────┐               │
-│  │              ZAJEDNIČKI                       │               │
-│  │  ○ Prijava u sustav                          │               │
-│  │  ○ Odjava iz sustava                         │               │
-│  │  ○ Promjena lozinke                          │               │
-│  │  ○ Pregled vlastitih prijava                 │               │
-│  └──────────────────────────────────────────────┘               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
 
 ---
 
@@ -774,19 +730,6 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 | **Role** | role_id | **UserRole** | 1:N | Jedna uloga može biti dodijeljena više korisnika (preko više zapisa) |
 | **Role** | role_id | **RolePermission** | 1:N | Jedna uloga može imati više prava (preko više zapisa) |
 | **Permission** | permission_id | **RolePermission** | 1:N | Jedno pravo može pripadati više uloga (preko više zapisa) |
-
-**Sažetak svih entiteta i njihovih odnosa:**
-
-| Entitet | Broj izlaznih veza | Broj ulaznih veza | Ukupno odnosa |
-|---------|-------------------|-------------------|---------------|
-| **User** | 5 (manager_id, created_by, assigned_to, changed_by, assigned_by) | 3 (user_id iz UserRole, LoginEvent, AuditLog) | 8 |
-| **Role** | 2 (role_id u UserRole, RolePermission) | 1 (role_id iz UserRole) | 3 |
-| **Permission** | 1 (permission_id u RolePermission) | 1 (permission_id iz RolePermission) | 2 |
-| **Task** | 0 | 2 (created_by, assigned_to) | 2 |
-| **UserRole** | 0 | 3 (user_id, role_id, assigned_by) | 3 |
-| **RolePermission** | 0 | 2 (role_id, permission_id) | 2 |
-| **LoginEvent** | 0 | 1 (user_id) | 1 |
-| **AuditLog** | 0 | 1 (changed_by) | 1 |
 
 ---
 

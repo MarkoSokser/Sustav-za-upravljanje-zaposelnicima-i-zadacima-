@@ -1,6 +1,6 @@
-
 -- Interni sustav za upravljanje zaposlenicima i zadacima
 -- PostgreSQL 15+
+
 
 DROP SCHEMA IF EXISTS employee_management CASCADE;
 
@@ -9,7 +9,7 @@ CREATE SCHEMA employee_management;
 SET search_path TO employee_management;
 
  
-
+-- ENUM TIPOVI
 CREATE TYPE task_status AS ENUM (
     'NEW',           
     'IN_PROGRESS',   
@@ -35,7 +35,6 @@ CREATE TYPE audit_action AS ENUM (
 
 
 -- COMPOSITE TIPOVI 
-
 CREATE TYPE timestamp_metadata AS (
     created_at TIMESTAMP,
     updated_at TIMESTAMP
@@ -50,7 +49,6 @@ CREATE TYPE address_info AS (
 
 
 -- DOMENE (za validaciju podataka)
-
 CREATE DOMAIN email_address AS VARCHAR(100)
     CHECK (VALUE ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
 
@@ -58,7 +56,7 @@ CREATE DOMAIN username_type AS VARCHAR(50)
     CHECK (VALUE ~* '^[a-zA-Z0-9_]{3,50}$');
 
 
-
+-- TABLICE
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     username username_type NOT NULL,
@@ -176,7 +174,6 @@ COMMENT ON COLUMN tasks.completed_at IS 'Datum i vrijeme zavr\u0161etka zadatka'
 
 
 
-
 CREATE TABLE user_roles (
     user_role_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -288,7 +285,7 @@ COMMENT ON COLUMN audit_log.ip_address IS 'IP adresa korisnika';
 
 
 
-
+-- INDEKSI
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_manager ON users(manager_id) WHERE manager_id IS NOT NULL;
@@ -333,8 +330,6 @@ CREATE INDEX idx_audit_log_action ON audit_log(action);
 
 
 -- POGLEDI (VIEWS)
--- Pogled: Korisnici s njihovim ulogama
-
 CREATE VIEW v_users_with_roles AS
 SELECT 
     u.user_id,
@@ -358,7 +353,7 @@ GROUP BY u.user_id, u.username, u.email, u.first_name, u.last_name,
 COMMENT ON VIEW v_users_with_roles IS 'Pregled korisnika s njihovim ulogama i managerom';
 
 
--- Pogled: Uloge s pravima
+
 CREATE VIEW v_roles_with_permissions AS
 SELECT 
     r.role_id,
@@ -375,8 +370,6 @@ GROUP BY r.role_id, r.name, r.description, r.is_system;
 
 COMMENT ON VIEW v_roles_with_permissions IS 'Pregled uloga s dodijeljenim pravima';
 
-
--- Pogled: Zadaci s detaljima
 
 CREATE VIEW v_tasks_details AS
 SELECT 
@@ -410,7 +403,6 @@ LEFT JOIN users a ON t.assigned_to = a.user_id;
 COMMENT ON VIEW v_tasks_details IS 'Detaljni pregled zadataka s informacijama o kreatoru i dodijeljenom korisniku';
 
 
--- Pogled: Statistika korisnika
 
 CREATE VIEW v_user_statistics AS
 SELECT 
@@ -434,7 +426,6 @@ GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.is_active;
 COMMENT ON VIEW v_user_statistics IS 'Statistika aktivnosti korisnika';
 
 
--- Pogled: Tim managera
 
 CREATE VIEW v_manager_team AS
 SELECT 

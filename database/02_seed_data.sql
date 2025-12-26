@@ -1,6 +1,4 @@
--- Pocetni podaci (Seed Data)
 -- Interni sustav za upravljanje zaposlenicima i zadacima
-
 SET search_path TO employee_management;
 
 
@@ -50,14 +48,14 @@ INSERT INTO roles (name, description, is_system) VALUES
 
 
 -- POCETNI PODACI - ROLE_PERMISSIONS (RBAC Matrix)
--- ADMIN ima SVA prava (26 permissions)
+-- ADMIN 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT 
     (SELECT role_id FROM roles WHERE name = 'ADMIN'),
     permission_id
 FROM permissions;
 
--- MANAGER ima 12 permissions
+-- MANAGER 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT 
     (SELECT role_id FROM roles WHERE name = 'MANAGER'),
@@ -70,7 +68,7 @@ WHERE code IN (
     'LOGIN_EVENTS_READ_SELF'
 );
 
--- EMPLOYEE ima 5 permissions
+-- EMPLOYEE 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT 
     (SELECT role_id FROM roles WHERE name = 'EMPLOYEE'),
@@ -83,7 +81,7 @@ WHERE code IN (
 );
 
 
--- POCETNI PODACI - USERS (Testni korisnici)
+-- POCETNI PODACI - USERS
 -- Admin
 INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
 ('admin', 'admin@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'System', 'Admin', NULL, TRUE);
@@ -109,7 +107,7 @@ INSERT INTO users (username, email, password_hash, first_name, last_name, manage
 ('old_employee', 'old.employee@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Old', 'Employee', NULL, FALSE);
 
 
--- POCETNI PODACI - USER_ROLES (Dodjela uloga)
+-- POCETNI PODACI - USER_ROLES 
 -- Admin
 INSERT INTO user_roles (user_id, role_id)
 VALUES (
@@ -133,7 +131,7 @@ SELECT
 FROM users
 WHERE username IN ('marko_dev', 'petra_dev', 'luka_dev', 'maja_design', 'tomislav_design');
 
--- Deaktivirani korisnik (za testiranje)
+-- Deaktivirani korisnik 
 INSERT INTO user_roles (user_id, role_id)
 VALUES (
     (SELECT user_id FROM users WHERE username = 'old_employee'),
@@ -141,7 +139,7 @@ VALUES (
 );
 
 
--- POCETNI PODACI - TASKS (Testni zadaci)
+-- POCETNI PODACI - TASKS 
 -- Zadaci od Ivan Horvat (Manager)
 INSERT INTO tasks (title, description, status, priority, due_date, created_by, assigned_to, created_at, completed_at) VALUES
 (
@@ -226,7 +224,7 @@ INSERT INTO tasks (title, description, status, priority, due_date, created_by, a
 );
 
 
--- POCETNI PODACI - LOGIN_EVENTS (Testni login eventi)
+-- POCETNI PODACI - LOGIN_EVENTS 
 -- Uspjesne prijave
 INSERT INTO login_events (user_id, username_attempted, login_time, ip_address, user_agent, success) VALUES
 ((SELECT user_id FROM users WHERE username = 'admin'), 'admin', CURRENT_TIMESTAMP - INTERVAL '2 hours', '192.168.1.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', TRUE),
@@ -243,7 +241,7 @@ INSERT INTO login_events (user_id, username_attempted, login_time, ip_address, u
 ((SELECT user_id FROM users WHERE username = 'old_employee'), 'old_employee', CURRENT_TIMESTAMP - INTERVAL '45 minutes', '192.168.1.20', 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6)', FALSE, 'ACCOUNT_INACTIVE');
 
 
--- POCETNI PODACI - AUDIT_LOG (Testni audit zapisi)
+-- POCETNI PODACI - AUDIT_LOG 
 -- Audit za kreiranje admin korisnika
 INSERT INTO audit_log (changed_by, action, entity_name, entity_id, old_value, new_value, ip_address) VALUES
 ((SELECT user_id FROM users WHERE username = 'admin'), 'INSERT', 'users', 1, NULL, '{"username":"admin","email":"admin@example.com"}', '192.168.1.1');

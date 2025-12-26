@@ -83,7 +83,7 @@ CREATE TYPE timestamp_metadata AS (
     updated_at TIMESTAMP
 );
 
--- Tip za adresu (za buduće proširenje)
+-- Tip za adresu 
 CREATE TYPE address_info AS (
     street VARCHAR(200),
     city VARCHAR(100),
