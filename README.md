@@ -174,18 +174,4 @@ CREATE DOMAIN email_address AS VARCHAR(100)
 
 ---
 
-## Faze projekta
 
-1. ✅ **Faza 1-3**: Definicija domene, teorijski uvod, konceptualni model
-2. ✅ **Faza 4**: Logički i objektno-relacijski model (PostgreSQL shema)
-3. ✅ **Faza 5**: Funkcije, procedure i triggeri
-4. ✅ **Faza 6**: Backend aplikacija (FastAPI)
-5. 🔲 **Faza 7**: Frontend aplikacija
-6. 🔲 **Faza 8**: Automatizacija i deployment
-7. 🔲 **Faza 9**: LaTeX dokumentacija
-
----
-
-## Licenca
-
-GPL-3.0 License
