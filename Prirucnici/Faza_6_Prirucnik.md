@@ -276,14 +276,86 @@ def check_permission(conn, user_id: int, permission_code: str) -> bool:
 
 ## 7. Testiranje API-ja
 
-### Korištenje Swagger UI
+### 7.1 Automatsko Testiranje
+
+Backend dolazi s kompletnom test skriptom koja testira sve endpointe i funkcionalnosti.
+
+#### Pokretanje Test Skripte
+
+```bash
+# 1. Aktiviraj virtualno okruženje 
+venv\Scripts\activate
+
+# 2. Pokreni test skriptu
+python test_api.py
+```
+
+#### Test Pokrivenost
+
+Test skripta provjerava **41 test slučaj**:
+
+**1. Health Check (4 testa)**
+- Root endpoint dostupnost
+- API verzija
+- Health endpoint
+- Database konekcija
+
+**2. Autentikacija (9 testova)**
+- Admin login
+- Token generiranje
+- Neuspješna prijava
+- Trenutni korisnik
+- Permisije korisnika
+- Uloge korisnika
+
+**3. Korisnici (5 testova)**
+- Lista svih korisnika
+- Statistike korisnika
+- Pojedinačni korisnik
+- Tim korisnika
+
+**4. Zadaci (6 testova)**
+- Lista zadataka
+- Kreiranje zadatka
+- Statistike zadataka
+- Moji zadaci
+
+**5. Uloge (6 testova)**
+- Lista uloga
+- Provjera sistemskih uloga (ADMIN, MANAGER, EMPLOYEE)
+- Lista permisija
+
+**6. Audit Logovi (3 testa)**
+- Audit zapisi
+- Login eventi
+
+**7. Sigurnost (2 testa)**
+- Odbijanje neautoriziranog pristupa
+- Odbijanje nevažećeg tokena
+
+**8. Različiti Korisnici (4 testa)**
+- Manager login i uloge
+- Employee login
+- RBAC permisije
+
+
+**Napomena**: Svi korisnici trenutno dijele istu lozinku (`Admin@123`) za potrebe testiranja.
+
+---
+
+### 7.2 Korištenje Swagger UI
 
 1. Otvori http://localhost:8000/docs
 2. Klikni na "Authorize" button
-3. Unesi token (bez "Bearer " prefiksa)
-4. Testiraj endpoint-e
+3. Unesi **username** i **password** (npr. `admin` / `Admin@123`)
+4. Klikni "Authorize"
+5. Testiraj endpoint-e
 
-### Primjeri s curl
+**Važno**: U Swagger UI unosiš username i password, ne JWT token! Swagger automatski upravlja tokenom.
+
+---
+
+### 7.3 Primjeri s curl
 
 ```bash
 # 1. Prijava
