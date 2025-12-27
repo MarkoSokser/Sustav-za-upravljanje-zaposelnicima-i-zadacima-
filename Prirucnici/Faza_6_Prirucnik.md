@@ -326,32 +326,5 @@ Backend aktivno koristi sve mogućnosti baze implementirane u prethodnim fazama:
 
 ---
 
-## 9. Napomene za Projekt
 
-### Fokus na Bazu
-- Sva poslovna logika je u bazi (funkcije, procedure)
-- Backend samo poziva PostgreSQL i formatira odgovore
-- Triggeri automatski vode audit log
 
-### Jednostavnost
-- Nema ORM-a (direktni SQL pozivi)
-- Jednostavna JWT autentikacija
-- Minimalni middleware
-
-### Proširivost
-- Lako dodavanje novih endpoint-a
-- RBAC se proširuje dodavanjem novih permisija u bazu
-- Audit automatski prati nove tablice (dodavanjem triggera)
-
----
-
-## 10. Sljedeći Koraci
-
-1. **Faza 7**: Frontend aplikacija (React/Vue/Nuxt)
-   - Povezivanje s ovim API-jem
-   - Login forma
-   - Dashboard s ulogama
-   - CRUD forme za korisnike i zadatke
-
-2. **Testiranje**: Pisanje integracijskih testova za API
-3. **Deployment**: Docker konfiguracija za produkciju
