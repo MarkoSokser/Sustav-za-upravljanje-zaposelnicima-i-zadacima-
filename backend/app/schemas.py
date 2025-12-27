@@ -142,8 +142,8 @@ class RoleResponse(RoleBase):
     """Response model uloge"""
     role_id: int
     is_system: bool
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True

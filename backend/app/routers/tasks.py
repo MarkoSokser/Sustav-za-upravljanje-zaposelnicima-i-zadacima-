@@ -27,7 +27,7 @@ async def get_all_tasks(
     priority: Optional[TaskPriority] = Query(None),
     assigned_to: Optional[int] = Query(None),
     created_by: Optional[int] = Query(None),
-    current_user: dict = Depends(require_permission("TASK_VIEW")),
+    current_user: dict = Depends(require_permission("TASK_READ_ALL")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -36,7 +36,7 @@ async def get_all_tasks(
     Koristi PostgreSQL view:
     - v_tasks_details
     
-    Potrebna permisija: TASK_VIEW
+    Potrebna permisija: TASK_READ_ALL
     """
     query = "SELECT * FROM v_tasks_details WHERE 1=1"
     params = []
@@ -195,7 +195,7 @@ async def get_task(
     can_view = (
         task['assignee_id'] == current_user['user_id'] or
         task['creator_id'] == current_user['user_id'] or
-        check_permission(conn, current_user['user_id'], 'TASK_VIEW')
+        check_permission(conn, current_user['user_id'], 'TASK_READ_ALL')
     )
     
     if not can_view:

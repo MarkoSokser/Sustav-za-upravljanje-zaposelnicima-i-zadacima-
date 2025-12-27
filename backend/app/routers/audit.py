@@ -25,7 +25,7 @@ async def get_audit_logs(
     from_date: Optional[date] = Query(None, description="Od datuma"),
     to_date: Optional[date] = Query(None, description="Do datuma"),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: dict = Depends(require_permission("AUDIT_VIEW")),
+    current_user: dict = Depends(require_permission("AUDIT_READ_ALL")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -34,7 +34,7 @@ async def get_audit_logs(
     Koristi PostgreSQL tablicu:
     - audit_log
     
-    Potrebna permisija: AUDIT_VIEW
+    Potrebna permisija: AUDIT_READ_ALL
     
     Audit log automatski bilježi sve promjene putem trigger-a:
     - trg_audit_users
@@ -98,7 +98,7 @@ async def get_audit_logs(
 async def get_entity_history(
     entity_name: str,
     entity_id: int,
-    current_user: dict = Depends(require_permission("AUDIT_VIEW")),
+    current_user: dict = Depends(require_permission("AUDIT_READ_ALL")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -107,7 +107,7 @@ async def get_entity_history(
     Koristi PostgreSQL tablicu:
     - audit_log
     
-    Potrebna permisija: AUDIT_VIEW
+    Potrebna permisija: AUDIT_READ_ALL
     """
     with conn.cursor() as cur:
         cur.execute("""
@@ -143,7 +143,7 @@ async def get_login_events(
     from_date: Optional[date] = Query(None, description="Od datuma"),
     to_date: Optional[date] = Query(None, description="Do datuma"),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: dict = Depends(require_permission("AUDIT_VIEW")),
+    current_user: dict = Depends(require_permission("AUDIT_READ_ALL")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -152,7 +152,7 @@ async def get_login_events(
     Koristi PostgreSQL tablicu:
     - login_events
     
-    Potrebna permisija: AUDIT_VIEW
+    Potrebna permisija: AUDIT_READ_ALL
     
     Login eventi se bilježe putem funkcije:
     - log_login_attempt()
@@ -207,14 +207,14 @@ async def get_login_events(
             summary="Neuspjeli pokusaji prijave")
 async def get_failed_logins(
     limit: int = Query(50, ge=1, le=500),
-    current_user: dict = Depends(require_permission("AUDIT_VIEW")),
+    current_user: dict = Depends(require_permission("AUDIT_READ_ALL")),
     conn = Depends(get_db_dependency)
 ):
     """
     Dohvaca neuspjele pokusaje prijave.
     Korisno za sigurnosni monitoring.
     
-    Potrebna permisija: AUDIT_VIEW
+    Potrebna permisija: AUDIT_READ_ALL
     """
     with conn.cursor() as cur:
         cur.execute("""
@@ -243,13 +243,13 @@ async def get_failed_logins(
 
 @router.get("/statistics", summary="Statistike audita")
 async def get_audit_statistics(
-    current_user: dict = Depends(require_permission("AUDIT_VIEW")),
+    current_user: dict = Depends(require_permission("AUDIT_READ_ALL")),
     conn = Depends(get_db_dependency)
 ):
     """
     Dohvaca statistike audit logova i login evenata.
     
-    Potrebna permisija: AUDIT_VIEW
+    Potrebna permisija: AUDIT_READ_ALL
     """
     with conn.cursor() as cur:
         # Broj audit zapisa po entitetu

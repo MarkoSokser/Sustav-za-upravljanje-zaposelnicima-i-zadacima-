@@ -23,7 +23,7 @@ router = APIRouter(prefix="/users", tags=["Korisnici"])
 @router.get("", response_model=List[UserWithRoles], summary="Dohvati sve korisnike")
 async def get_all_users(
     is_active: Optional[bool] = Query(None, description="Filter po aktivnosti"),
-    current_user: dict = Depends(require_permission("USER_VIEW")),
+    current_user: dict = Depends(require_permission("USER_READ_ALL")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -32,7 +32,7 @@ async def get_all_users(
     Koristi PostgreSQL view:
     - v_users_with_roles
     
-    Potrebna permisija: USER_VIEW
+    Potrebna permisija: USER_READ_ALL
     """
     with conn.cursor() as cur:
         if is_active is not None:
@@ -71,7 +71,7 @@ async def get_all_users(
 @router.get("/statistics", response_model=List[UserStatistics], 
             summary="Statistike svih korisnika")
 async def get_all_user_statistics(
-    current_user: dict = Depends(require_permission("USER_VIEW")),
+    current_user: dict = Depends(require_permission("USER_READ_ALL")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -80,7 +80,7 @@ async def get_all_user_statistics(
     Koristi PostgreSQL view:
     - v_user_statistics
     
-    Potrebna permisija: USER_VIEW
+    Potrebna permisija: USER_READ_ALL
     """
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM v_user_statistics ORDER BY full_name")
@@ -104,13 +104,13 @@ async def get_user(
     Korisnik moze vidjeti:
     - Vlastite podatke
     - Podatke clanova svog tima (ako je manager)
-    - Sve korisnike (ako ima USER_VIEW permisiju)
+    - Sve korisnike (ako ima USER_READ_ALL permisiju)
     """
     # Provjera pristupa
     can_view = (
         user_id == current_user['user_id'] or  # Vlastiti podaci
         is_manager_of_user(conn, current_user['user_id'], user_id) or  # Clan tima
-        check_permission(conn, current_user['user_id'], 'USER_VIEW')  # Permisija
+        check_permission(conn, current_user['user_id'], 'USER_READ_ALL')  # Permisija
     )
     
     if not can_view:
@@ -165,7 +165,7 @@ async def get_user_task_statistics(
     can_view = (
         user_id == current_user['user_id'] or
         is_manager_of_user(conn, current_user['user_id'], user_id) or
-        check_permission(conn, current_user['user_id'], 'USER_VIEW')
+        check_permission(conn, current_user['user_id'], 'USER_READ_ALL')
     )
     
     if not can_view:
@@ -329,7 +329,7 @@ async def update_user(
                summary="Deaktiviraj korisnika")
 async def deactivate_user(
     user_id: int,
-    current_user: dict = Depends(require_permission("USER_DELETE")),
+    current_user: dict = Depends(require_permission("USER_DEACTIVATE")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -338,7 +338,7 @@ async def deactivate_user(
     Koristi PostgreSQL proceduru:
     - deactivate_user()
     
-    Potrebna permisija: USER_DELETE
+    Potrebna permisija: USER_DEACTIVATE
     """
     if user_id == current_user['user_id']:
         raise HTTPException(

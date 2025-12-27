@@ -19,7 +19,7 @@ router = APIRouter(prefix="/roles", tags=["Uloge i Permisije"])
 
 @router.get("", response_model=List[RoleWithPermissions], summary="Dohvati sve uloge")
 async def get_all_roles(
-    current_user: dict = Depends(require_permission("ROLE_VIEW")),
+    current_user: dict = Depends(require_permission("ROLE_READ")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -28,7 +28,7 @@ async def get_all_roles(
     Koristi PostgreSQL view:
     - v_roles_with_permissions
     
-    Potrebna permisija: ROLE_VIEW
+    Potrebna permisija: ROLE_READ
     """
     with conn.cursor() as cur:
         cur.execute("""
@@ -56,13 +56,13 @@ async def get_all_roles(
 @router.get("/permissions", response_model=List[PermissionResponse],
             summary="Dohvati sve permisije")
 async def get_all_permissions(
-    current_user: dict = Depends(require_permission("ROLE_VIEW")),
+    current_user: dict = Depends(require_permission("ROLE_READ")),
     conn = Depends(get_db_dependency)
 ):
     """
     Dohvaca sve dostupne permisije u sustavu.
     
-    Potrebna permisija: ROLE_VIEW
+    Potrebna permisija: ROLE_READ
     """
     with conn.cursor() as cur:
         cur.execute("""
@@ -78,7 +78,7 @@ async def get_all_permissions(
             summary="Dohvati ulogu")
 async def get_role(
     role_id: int,
-    current_user: dict = Depends(require_permission("ROLE_VIEW")),
+    current_user: dict = Depends(require_permission("ROLE_READ")),
     conn = Depends(get_db_dependency)
 ):
     """
@@ -87,7 +87,7 @@ async def get_role(
     Koristi PostgreSQL view:
     - v_roles_with_permissions
     
-    Potrebna permisija: ROLE_VIEW
+    Potrebna permisija: ROLE_READ
     """
     with conn.cursor() as cur:
         cur.execute("""
@@ -117,13 +117,13 @@ async def get_role(
 @router.get("/{role_id}/users", summary="Korisnici s ulogom")
 async def get_role_users(
     role_id: int,
-    current_user: dict = Depends(require_permission("ROLE_VIEW")),
+    current_user: dict = Depends(require_permission("ROLE_READ")),
     conn = Depends(get_db_dependency)
 ):
     """
     Dohvaca sve korisnike koji imaju odredjenu ulogu.
     
-    Potrebna permisija: ROLE_VIEW
+    Potrebna permisija: ROLE_READ
     """
     with conn.cursor() as cur:
         cur.execute("""
