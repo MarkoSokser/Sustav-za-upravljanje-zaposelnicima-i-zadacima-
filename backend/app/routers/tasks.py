@@ -411,6 +411,10 @@ async def update_task(
                 update_parts.append("due_date = %s")
                 params.append(task_data.due_date)
             
+            if task_data.assigned_to is not None:
+                update_parts.append("assigned_to = %s")
+                params.append(task_data.assigned_to)
+            
             if update_parts:
                 update_parts.append("updated_at = CURRENT_TIMESTAMP")
                 params.append(task_id)

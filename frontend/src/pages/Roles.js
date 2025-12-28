@@ -83,13 +83,13 @@ const Roles = () => {
     }
   };
 
-  const handleRemoveRole = async (userId, roleId) => {
+  const handleRemoveRole = async (userId, roleName) => {
     if (!window.confirm('Jeste li sigurni da želite ukloniti ovu ulogu?')) {
       return;
     }
 
     try {
-      await rolesAPI.removeFromUser(userId, roleId);
+      await rolesAPI.removeFromUser(userId, roleName);
       setSuccess('Uloga uspješno uklonjena');
       loadData();
       setTimeout(() => setSuccess(''), 3000);
@@ -180,10 +180,10 @@ const Roles = () => {
                           style={{marginRight: '5px'}}
                         >
                           {roleName}
-                          {canAssign && !role.is_system && (
+                          {canAssign && (
                             <button
                               className="remove-badge"
-                              onClick={() => handleRemoveRole(user.user_id, role.role_id)}
+                              onClick={() => handleRemoveRole(user.user_id, roleName)}
                               title="Ukloni ulogu"
                             >
                               ×

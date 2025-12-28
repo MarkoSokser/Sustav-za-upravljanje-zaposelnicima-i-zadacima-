@@ -6,6 +6,7 @@ import './Login.css';
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -60,14 +61,25 @@ const Login = () => {
 
           <div className="form-group">
             <label htmlFor="password">Lozinka</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+                title={showPassword ? "Sakrij lozinku" : "Prikaži lozinku"}
+              >
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
           </div>
 
           {error && <div className="error">{error}</div>}
@@ -83,11 +95,11 @@ const Login = () => {
 
         <div className="demo-credentials">
           <h3>Demo pristupni podaci:</h3>
-          <p><strong>Admin:</strong> admin / password</p>
-          <p><strong>Manager:</strong> ivan_manager / password</p>
-          <p><strong>Employee:</strong> marko_dev / password</p>
+          <p><strong>Admin:</strong> admin / Admin123!</p>
+          <p><strong>Manager:</strong> ivan_manager / IvanM2024!</p>
+          <p><strong>Employee:</strong> marko_dev / Marko2024!</p>
           <p style={{fontSize: '12px', color: '#999', marginTop: '10px'}}>
-            Svi korisnici koriste lozinku: <strong>password</strong>
+            Svaki korisnik ima svoju jedinstvenu lozinku
           </p>
         </div>
       </div>

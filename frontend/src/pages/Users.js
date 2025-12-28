@@ -153,15 +153,19 @@ const Users = () => {
   const handleToggleActive = async (userId, isActive) => {
     try {
       if (isActive) {
+        // Deaktiviraj korisnika
         await usersAPI.deactivate(userId);
+        setSuccess('Korisnik uspješno deaktiviran');
       } else {
+        // Aktiviraj korisnika
         await usersAPI.activate(userId);
+        setSuccess('Korisnik uspješno aktiviran');
       }
-      setSuccess(`Korisnik uspješno ${isActive ? 'deaktiviran' : 'aktiviran'}`);
       loadUsers();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError('Greška pri promjeni statusa korisnika');
+      const errorMsg = error.response?.data?.detail || 'Greška pri promjeni statusa korisnika';
+      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
     }
   };
 
@@ -170,8 +174,9 @@ const Users = () => {
   }
 
   const canCreate = hasPermission('USER_CREATE');
-  const canUpdate = hasPermission('USER_UPDATE');
+  const canUpdate = hasPermission('USER_UPDATE') || hasPermission('USER_UPDATE_ALL');
   const canDelete = hasPermission('USER_DELETE');
+  const canDeactivate = hasPermission('USER_DEACTIVATE');
 
   return (
     <div className="users-page">
@@ -222,20 +227,20 @@ const Users = () => {
                 <td>
                   <div className="action-buttons">
                     {canUpdate && (
-                      <>
-                        <button 
-                          className="btn btn-primary btn-sm" 
-                          onClick={() => handleEdit(user)}
-                        >
-                          Uredi
-                        </button>
-                        <button 
-                          className={`btn ${user.is_active ? 'btn-secondary' : 'btn-success'} btn-sm`}
-                          onClick={() => handleToggleActive(user.user_id, user.is_active)}
-                        >
-                          {user.is_active ? 'Deaktiviraj' : 'Aktiviraj'}
-                        </button>
-                      </>
+                      <button 
+                        className="btn btn-primary btn-sm" 
+                        onClick={() => handleEdit(user)}
+                      >
+                        Uredi
+                      </button>
+                    )}
+                    {canDeactivate && (
+                      <button 
+                        className={`btn ${user.is_active ? 'btn-warning' : 'btn-success'} btn-sm`}
+                        onClick={() => handleToggleActive(user.user_id, user.is_active)}
+                      >
+                        {user.is_active ? 'Deaktiviraj' : 'Aktiviraj'}
+                      </button>
                     )}
                     {canDelete && (
                       <button 

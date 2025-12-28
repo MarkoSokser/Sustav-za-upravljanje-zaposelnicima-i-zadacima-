@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { tasksAPI, usersAPI } from '../services/api';
+import TaskDetailsModal from '../components/TaskDetailsModal';
 import './Tasks.css';
 
 const Tasks = () => {
@@ -11,8 +12,11 @@ const Tasks = () => {
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [taskDetails, setTaskDetails] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [viewMode, setViewMode] = useState('all'); // 'all' or 'my'
   
   // Filteri
   const [statusFilter, setStatusFilter] = useState('');
@@ -29,17 +33,23 @@ const Tasks = () => {
   useEffect(() => {
     loadTasks();
     loadUsers();
-  }, [statusFilter, priorityFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [statusFilter, priorityFilter, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTasks = async () => {
     setLoading(true);
     setError('');
     try {
-      const params = {};
-      if (statusFilter) params.status = statusFilter;
-      if (priorityFilter) params.priority = priorityFilter;
-      
-      const response = await tasksAPI.getAll(params);
+      let response;
+      if (viewMode === 'my') {
+        // Ucitaj samo moje zadatke
+        response = await tasksAPI.getMyTasks();
+      } else {
+        // Ucitaj sve zadatke s filterima
+        const params = {};
+        if (statusFilter) params.status = statusFilter;
+        if (priorityFilter) params.priority = priorityFilter;
+        response = await tasksAPI.getAll(params);
+      }
       setTasks(response.data);
     } catch (error) {
       if (error.response?.status === 403) {
@@ -75,6 +85,11 @@ const Tasks = () => {
     setShowModal(true);
     setError('');
     setSuccess('');
+  };
+
+  const handleViewDetails = (task) => {
+    setTaskDetails(task);
+    setShowDetailsModal(true);
   };
 
   const handleEdit = (task) => {
@@ -158,7 +173,10 @@ const Tasks = () => {
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError('Greška pri promjeni statusa');
+      console.error('Error details:', error.response?.data);
+      const errorMsg = error.response?.data?.detail || 'Greška pri promjeni statusa';
+      setError(errorMsg);
+      setTimeout(() => setError(''), 5000);
     }
   };
 
@@ -187,18 +205,39 @@ const Tasks = () => {
   }
 
   const canCreate = hasPermission('TASK_CREATE');
-  const canUpdate = hasPermission('TASK_UPDATE');
+  const canUpdate = hasPermission('TASK_UPDATE') || hasPermission('TASK_UPDATE_ANY');
   const canDelete = hasPermission('TASK_DELETE');
+  const canReadAll = hasPermission('TASK_READ_ALL');
+  const canReadSelf = hasPermission('TASK_READ_SELF');
 
   return (
     <div className="tasks-page">
       <div className="page-header">
         <h1>Zadaci</h1>
-        {canCreate && (
-          <button className="btn btn-primary" onClick={handleCreate}>
-            + Novi zadatak
-          </button>
-        )}
+        <div style={{display: 'flex', gap: '10px'}}>
+          {/* Gumbi za prebacivanje pogleda */}
+          {canReadAll && canReadSelf && (
+            <>
+              <button 
+                className={`btn ${viewMode === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setViewMode('all')}
+              >
+                Svi zadaci
+              </button>
+              <button 
+                className={`btn ${viewMode === 'my' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setViewMode('my')}
+              >
+                Moji zadaci
+              </button>
+            </>
+          )}
+          {canCreate && (
+            <button className="btn btn-primary" onClick={handleCreate}>
+              + Novi zadatak
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -245,7 +284,13 @@ const Tasks = () => {
             {tasks.map(task => (
               <tr key={task.task_id}>
                 <td>
-                  <strong>{task.title}</strong>
+                  <strong 
+                    style={{cursor: 'pointer', color: '#667eea'}} 
+                    onClick={() => handleViewDetails(task)}
+                    title="Klikni za detalje"
+                  >
+                    {task.title}
+                  </strong>
                   {task.description && (
                     <div style={{fontSize: '12px', color: '#666', marginTop: '5px'}}>
                       {task.description.substring(0, 50)}...
@@ -253,7 +298,7 @@ const Tasks = () => {
                   )}
                 </td>
                 <td>
-                  {canUpdate ? (
+                  {canUpdate && task.status !== 'COMPLETED' && task.status !== 'CANCELLED' ? (
                     <select 
                       value={task.status}
                       onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
@@ -267,7 +312,12 @@ const Tasks = () => {
                     </select>
                   ) : (
                     <span className={`badge ${getStatusBadge(task.status)}`}>
-                      {task.status}
+                      {task.status === 'NEW' ? 'Novo' :
+                       task.status === 'IN_PROGRESS' ? 'U tijeku' :
+                       task.status === 'ON_HOLD' ? 'Na čekanju' :
+                       task.status === 'COMPLETED' ? 'Završeno' :
+                       task.status === 'CANCELLED' ? 'Otkazano' :
+                       task.status}
                     </span>
                   )}
                 </td>
@@ -287,6 +337,13 @@ const Tasks = () => {
                 </td>
                 <td>
                   <div className="action-buttons">
+                    <button 
+                      className="btn btn-info btn-sm" 
+                      onClick={() => handleViewDetails(task)}
+                      title="Prikaži detalje"
+                    >
+                      Detalji
+                    </button>
                     {canUpdate && (
                       <button 
                         className="btn btn-primary btn-sm" 
@@ -391,6 +448,14 @@ const Tasks = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal za detalje zadatka */}
+      {showDetailsModal && taskDetails && (
+        <TaskDetailsModal 
+          task={taskDetails} 
+          onClose={() => setShowDetailsModal(false)} 
+        />
       )}
     </div>
   );

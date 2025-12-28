@@ -361,3 +361,47 @@ async def deactivate_user(
         message=f"Korisnik ID {user_id} uspjesno deaktiviran",
         success=True
     )
+
+
+@router.post("/{user_id}/activate", response_model=MessageResponse,
+             summary="Aktiviraj korisnika")
+async def activate_user(
+    user_id: int,
+    current_user: dict = Depends(require_permission("USER_DEACTIVATE")),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Aktivira korisnika.
+    
+    Koristi PostgreSQL proceduru:
+    - update_user()
+    
+    Potrebna permisija: USER_DEACTIVATE
+    """
+    try:
+        with conn.cursor() as cur:
+            # Postavi is_active na TRUE
+            cur.execute("""
+                UPDATE users 
+                SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = %s
+            """, (user_id,))
+            
+            # Dodaj u audit log
+            cur.execute("""
+                INSERT INTO audit_log (changed_by, action, entity_name, entity_id, old_value, new_value)
+                VALUES (%s, 'UPDATE', 'users', %s, 
+                        '{"is_active": false}'::jsonb, 
+                        '{"is_active": true}'::jsonb)
+            """, (current_user['user_id'], user_id))
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    return MessageResponse(
+        message=f"Korisnik ID {user_id} uspjesno aktiviran",
+        success=True
+    )
