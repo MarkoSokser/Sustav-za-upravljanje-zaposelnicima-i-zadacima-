@@ -1,46 +1,76 @@
 # Interni sustav za upravljanje zaposlenicima i zadacima
 
-## TBP Projekt - Web aplikacija za upravljanje korisničkim računima, ulogama i pravima pristupa
+## TBP Projekt - Kompletan sustav za upravljanje korisnicima, zadacima i pravima pristupa
 
-### Opis projekta
+### ⭐ Opis projekta
 
 Ovaj projekt demonstrira primjenu **poopćenih i objektno-relacijskih baza podataka** (PostgreSQL) kroz implementaciju internog sustava za upravljanje zaposlenicima i zadacima s **RBAC modelom** (Role-Based Access Control).
 
-### Tehnologije
+**Projekt uključuje:**
+- ✅ PostgreSQL bazu s naprednim značajkama (ENUM, COMPOSITE tipovi, domene, funkcije, procedure, triggere)
+- ✅ FastAPI REST API backend s JWT autentikacijom
+- ✅ **React frontend aplikaciju** sa svim funkcionalnostima
+- ✅ Potpuni RBAC sustav (3 uloge, 12 permisija)
+- ✅ Automatski audit log putem PostgreSQL triggerah
+
+### 🚀 Tehnologije
 
 - **Baza podataka**: PostgreSQL 15+
-- **Backend**: Python FastAPI
+- **Backend**: Python FastAPI 0.109+
+- **Frontend**: React 18.2 + React Router + Axios
 - **Autentikacija**: JWT tokeni, bcrypt
 - **RBAC**: Role-Based Access Control
 
 ---
 
-## Brzi početak
+## 🚀 Brzi početak
 
-### 1. Inicijalizacija baze podataka
+### Opcija 1: Automatska skripta (Windows)
 
-```sql
--- Pokreni SQL skripte redom:
+```powershell
+# Pokreće backend i frontend automatski
+.\start.ps1
+```
+
+### Opcija 2: Ručno pokretanje
+
+📖 **Detaljne upute:** [`QUICK_START.md`](QUICK_START.md)
+
+**1. Baza podataka:**
+```powershell
+psql -U postgres
+CREATE DATABASE interni_sustav;
+\c interni_sustav
 \i database/01_schema.sql
 \i database/02_seed_data.sql
 \i database/03_functions_procedures.sql
 ```
 
-### 2. Pokretanje backend-a
-
-```bash
+**2. Backend:**
+```powershell
 cd backend
 python -m venv venv
-venv\Scripts\activate  # Windows
+.\venv\Scripts\activate
 pip install -r requirements.txt
-copy .env.example .env  # Konfiguriraj bazu
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 ```
+Backend: **http://localhost:8000** | Docs: **http://localhost:8000/docs**
 
-### 3. API Dokumentacija
+**3. Frontend:**
+```powershell
+cd frontend
+npm install
+npm start
+```
+Frontend: **http://localhost:3000**
 
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+### 🔐 Demo pristupni podaci
+
+| Uloga | Username | Password | Opis |
+|-------|----------|----------|------|
+| **ADMIN** | admin | admin123 | Puni pristup svim funkcijama |
+| **MANAGER** | jnovak | manager123 | Upravljanje timom i zadacima |
+| **EMPLOYEE** | ahorvat | employee123 | Pregled vlastitih zadataka |
 
 ---
 
@@ -48,21 +78,36 @@ uvicorn app.main:app --reload
 
 ```
 TBP_projekt/
-├── database/
-│   ├── 01_schema.sql           # Shema baze (tablice, tipovi, indeksi, pogledi)
-│   ├── 02_seed_data.sql        # Početni podaci
-│   └── 03_functions_procedures.sql  # Funkcije, procedure, triggeri
-├── backend/
+├── database/                    # PostgreSQL baza
+│   ├── 01_schema.sql           # Shema (tablice, ENUM, COMPOSITE, domene, viewovi)
+│   ├── 02_seed_data.sql        # Početni podaci (demo korisnici)
+│   └── 03_functions_procedures.sql  # 11 funkcija, 10 procedura, 7 triggera
+├── backend/                     # FastAPI REST API
 │   ├── app/
-│   │   ├── main.py             # FastAPI aplikacija
-│   │   ├── config.py           # Konfiguracija
-│   │   ├── database.py         # DB konekcija
-│   │   ├── auth.py             # JWT autentikacija
-│   │   ├── schemas.py          # Pydantic modeli
-│   │   └── routers/            # API rute
+│   │   ├── main.py             # Glavna aplikacija
+│   │   ├── routers/            # users, tasks, roles, auth, audit
+│   │   ├── auth.py             # JWT autentikacija + RBAC
+│   │   └── schemas.py          # Pydantic modeli
 │   └── requirements.txt
+├── frontend/                    # **React aplikacija (NOVO)**
+│   ├── src/
+│   │   ├── pages/              # Login, Dashboard, Users, Tasks, Roles, Audit
+│   │   ├── components/         # Layout, ProtectedRoute
+│   │   ├── context/            # AuthContext
+│   │   ├── services/           # API calls (Axios)
+│   │   └── App.js
+│   ├── package.json
+│   └── README.md
 ├── tests/                       # SQL testovi za bazu
-├── Prirucnici/                  # Dokumentacija po fazama
+├── Prirucnici/                  # Detaljni priručnici po fazama
+│   ├── PRIRUCNIK_PROJEKTA.md   # Glavni canvas
+│   ├── Faza_1_2_3_Prirucnik.md
+│   ├── Faza_4_Prirucnik.md
+│   ├── Faza_5_Prirucnik.md
+│   ├── Faza_6_Prirucnik.md
+│   └── Faza_7_Prirucnik.md     # **Frontend (NOVO)**
+├── QUICK_START.md               # Brzi vodič za pokretanje
+├── start.ps1                    # Automatska PowerShell skripta
 └── README.md
 ```
 
@@ -115,15 +160,29 @@ CREATE DOMAIN email_address AS VARCHAR(100)
 
 ## RBAC Model
 
-### Uloge
-| Uloga | Opis |
-|-------|------|
-| ADMIN | Puni pristup sustavu |
-| MANAGER | Upravljanje timom i zadacima |
-| EMPLOYEE | Rad s vlastitim zadacima |
+###📱 Frontend funkcionalnosti
 
-### Kategorije permisija
-- **USER**: USER_VIEW, USER_CREATE, USER_UPDATE, USER_DELETE
+### Stranice
+
+1. **🔑 Login** - JWT autentikacija
+2. **📊 Dashboard** - Statistike i pregled zadataka
+3. **👥 Users** - CRUD za korisnike (prikazuje `v_users_with_roles` view)
+4. **📋 Tasks** - CRUD za zadatke (koristi `task_status` i `task_priority` ENUM-e)
+5. **🔐 Roles** - Dodjela i upravljanje ulogama
+6. **📝 Audit Logs** - Prikaz svih promjena (triggeri `trg_audit_*`)
+
+### Demonstracija PostgreSQL značajki
+
+| PostgreSQL element | Gdje se prikazuje |
+|-------------------|-------------------|
+| ENUM tipovi | Tasks stranica (status, prioritet) |
+| COMPOSITE tipovi | Automatski (timestamp_metadata) |
+| Domene | Users stranica (email validacija) |
+| Funkcije | Dashboard (get_user_tasks, get_overdue_tasks) |
+| Procedure | Sve CRUD operacije (create_user, create_task) |
+| Triggeri | Audit stranica (automatski logovi) |
+| Viewovi | Users, Tasks, Roles stranice |
+| RBAC | Cijela aplikacija (provjera permisija)SER_UPDATE, USER_DELETE
 - **ROLE**: ROLE_VIEW, ROLE_CREATE, ROLE_UPDATE, ROLE_DELETE, ROLE_ASSIGN
 - **TASK**: TASK_VIEW, TASK_CREATE, TASK_UPDATE, TASK_UPDATE_ANY, TASK_DELETE, TASK_ASSIGN
 - **AUDIT**: AUDIT_VIEW, AUDIT_EXPORT, AUDIT_DELETE

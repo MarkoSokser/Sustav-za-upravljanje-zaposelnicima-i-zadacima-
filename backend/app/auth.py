@@ -174,10 +174,12 @@ def require_permission(permission_code: str):
 
 
 def get_user_permissions_list(conn, user_id: int) -> list:
-    """Dohvaca sve permisije korisnika koristeci funkciju iz baze"""
+    """Dohvaca sve permisije korisnika koristeci funkciju iz baze - vraca samo kodove"""
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM get_user_permissions(%s)", (user_id,))
-        return [dict(row) for row in cur.fetchall()]
+        permissions = cur.fetchall()
+        # Vrati samo permission_code stringove
+        return [perm['permission_code'] for perm in permissions]
 
 
 def get_user_roles_list(conn, user_id: int) -> list:

@@ -138,18 +138,44 @@ Implementirati aplikacijski sloj sustava.
 
 ---
 
-## 7. Frontend aplikacija (React ili Nuxt)
+## 7. Frontend aplikacija (React)
 
 ### Cilj faze
-Omogućiti grafičko korištenje sustava.
+Omogućiti grafičko korištenje sustava kroz React aplikaciju koja prikazuje sve funkcionalnosti PostgreSQL baze.
 
 ### Aktivnosti
-- login i dashboard stranice  
-- uvjetni prikaz funkcionalnosti prema ulozi  
-- forme za upravljanje korisnicima i zadacima  
+- implementacija React aplikacije s React Router-om  
+- autentikacija s JWT tokenima  
+- stranice:
+  - Login (prijava korisnika)
+  - Dashboard (statistike i pregled)
+  - Users (upravljanje korisnicima - CRUD)
+  - Tasks (upravljanje zadacima - CRUD)
+  - Roles (dodjela i upravljanje ulogama)
+  - AuditLogs (pregled svih promjena u bazi)
+- demonstracija svih PostgreSQL značajki:
+  - ENUM tipovi (task_status, task_priority)
+  - Procedure (create_user, create_task, assign_role)
+  - Funkcije (get_user_tasks, get_overdue_tasks)
+  - Triggeri (automatski audit log)
+  - Viewovi (v_users_with_roles, v_tasks_details)
+  - RBAC model (provjera permisija)
+
+### Implementirane komponente
+- `AuthContext` - Context za autentikaciju i state management
+- `ProtectedRoute` - Zaštita ruta s provjerom autentikacije
+- `Layout` - Glavni layout s navigacijom
+- API service (Axios) - Centralizirana komunikacija s backendom
+- Modali za kreiranje/uređivanje entiteta
+- Badge komponente za statuse i prioritete
+- Filteri i sortiranje podataka
 
 ### Ishod faze
-- funkcionalno web grafičko sučelje  
+- ✅ Funkcionalno React web sučelje
+- ✅ Prikaz svih funkcionalnosti baze podataka
+- ✅ JWT autentikacija i RBAC kontrola pristupa
+- ✅ Jednostavno i intuitivno korisničko iskustvo
+- ✅ README i detaljni priručnik (Faza_7_Prirucnik.md)  
 
 ---
 
@@ -206,5 +232,34 @@ U sljedećim koracima projekt će se razvijati **fazu po fazu**, koristeći ovaj
 
 ---
 
+---
+
+## Status implementacije
+
+✅ **Faza 1** - Definicija domene i zahtjeva - ZAVRŠENO  
+✅ **Faza 2** - Teorijski uvod - ZAVRŠENO  
+✅ **Faza 3** - Konceptualni model baze podataka - ZAVRŠENO  
+✅ **Faza 4** - Logički i objektno-relacijski model - ZAVRŠENO  
+✅ **Faza 5** - Funkcije, procedure i okidači - ZAVRŠENO  
+✅ **Faza 6** - Backend aplikacija (FastAPI) - ZAVRŠENO  
+✅ **Faza 7** - Frontend aplikacija (React) - **ZAVRŠENO**  
+⏳ **Faza 8** - Automatizacija i repozitorij - U TIJEKU  
+⏳ **Faza 9** - Dokumentacija (LaTeX) - SLJEDEĆE  
+⏳ **Faza 10** - Završna provjera - SLJEDEĆE  
+
+---
+
+## Detaljni priručnici po fazama
+
+Za svaku fazu postoji **detaljan priručnik** u `Prirucnici/` direktoriju:
+
+- `Faza_1_2_3_Prirucnik.md` - Domene, teorija i konceptualni model
+- `Faza_4_Prirucnik.md` - SQL implementacija baze
+- `Faza_5_Prirucnik.md` - Funkcije, procedure i triggeri
+- `Faza_6_Prirucnik.md` - Backend FastAPI
+- `Faza_7_Prirucnik.md` - **Frontend React (NOVO)**
+
+---
+
 **Sljedeći korak:**  
-Faza 1 – detaljna razrada aplikacijske domene i RBAC logike.
+Faza 8 – Automatizacija, GitHub i README dokumentacija.

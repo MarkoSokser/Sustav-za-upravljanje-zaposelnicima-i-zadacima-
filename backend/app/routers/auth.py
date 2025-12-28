@@ -44,6 +44,10 @@ async def login(
     client_ip = request.client.host if request.client else "0.0.0.0"
     user_agent = request.headers.get("user-agent", "Unknown")
     
+    # DEBUG: Ispiši što primamo
+    print(f"🔍 LOGIN ATTEMPT: username={form_data.username}, has_password={bool(form_data.password)}")
+    print(f"🔍 Headers: Authorization={request.headers.get('authorization', 'NONE')}")
+    
     # Pokusaj autentikacije
     user = authenticate_user(conn, form_data.username, form_data.password)
     
@@ -74,6 +78,18 @@ async def login(
     return Token(access_token=access_token, token_type="bearer")
 
 
+@router.post("/logout", response_model=MessageResponse, summary="Odjava korisnika")
+async def logout(current_user: dict = Depends(get_current_active_user)):
+    """
+    Odjava korisnika iz sustava.
+    
+    Napomena: JWT token je stateless, pa "logout" zapravo ne mora nista raditi na backendu.
+    Frontend jednostavno brise token iz localStorage.
+    Ovaj endpoint postoji samo za API konzistentnost.
+    """
+    return MessageResponse(message=f"Korisnik {current_user['username']} uspjesno odjavljen")
+
+
 @router.get("/me", response_model=UserWithRoles, summary="Trenutni korisnik")
 async def get_current_user_info(
     current_user: dict = Depends(get_current_active_user),
@@ -84,6 +100,7 @@ async def get_current_user_info(
     
     Koristi PostgreSQL funkcije:
     - get_user_roles() za dohvacanje uloga
+    - get_user_permissions() za dohvacanje permisija
     
     Koristi PostgreSQL view:
     - v_users_with_roles
@@ -101,6 +118,9 @@ async def get_current_user_info(
             detail="Korisnik nije pronadjen"
         )
     
+    # Dohvati permisije
+    permissions = get_user_permissions_list(conn, current_user['user_id'])
+    
     return UserWithRoles(
         user_id=user_data['user_id'],
         username=user_data['username'],
@@ -112,6 +132,7 @@ async def get_current_user_info(
         created_at=user_data['created_at'],
         updated_at=user_data['updated_at'],
         roles=user_data['roles'] if user_data['roles'] else [],
+        permissions=permissions,
         manager_username=user_data['manager_username'],
         manager_full_name=user_data['manager_full_name']
     )
