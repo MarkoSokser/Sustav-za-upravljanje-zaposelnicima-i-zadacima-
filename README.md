@@ -2,18 +2,18 @@
 
 ## TBP Projekt - Kompletan sustav za upravljanje korisnicima, zadacima i pravima pristupa
 
-### ⭐ Opis projekta
+###  Opis projekta
 
 Ovaj projekt demonstrira primjenu **poopćenih i objektno-relacijskih baza podataka** (PostgreSQL) kroz implementaciju internog sustava za upravljanje zaposlenicima i zadacima s **RBAC modelom** (Role-Based Access Control).
 
 **Projekt uključuje:**
-- ✅ PostgreSQL bazu s naprednim značajkama (ENUM, COMPOSITE tipovi, domene, funkcije, procedure, triggere)
-- ✅ FastAPI REST API backend s JWT autentikacijom
-- ✅ **React frontend aplikaciju** sa svim funkcionalnostima
-- ✅ Potpuni RBAC sustav (3 uloge, 12 permisija)
-- ✅ Automatski audit log putem PostgreSQL triggerah
+-  PostgreSQL bazu s naprednim značajkama (ENUM, COMPOSITE tipovi, domene, funkcije, procedure, triggere)
+-  FastAPI REST API backend s JWT autentikacijom
+-  **React frontend aplikaciju** sa svim funkcionalnostima
+-  Potpuni RBAC sustav (3 uloge, 12 permisija)
+-  Automatski audit log putem PostgreSQL triggerah
 
-### 🚀 Tehnologije
+###  Tehnologije
 
 - **Baza podataka**: PostgreSQL 15+
 - **Backend**: Python FastAPI 0.109+
@@ -23,18 +23,11 @@ Ovaj projekt demonstrira primjenu **poopćenih i objektno-relacijskih baza podat
 
 ---
 
-## 🚀 Brzi početak
+##  Brzi početak
 
-### Opcija 1: Automatska skripta (Windows)
+###  Ručno pokretanje
 
-```powershell
-# Pokreće backend i frontend automatski
-.\start.ps1
-```
-
-### Opcija 2: Ručno pokretanje
-
-📖 **Detaljne upute:** [`QUICK_START.md`](QUICK_START.md)
+ **Detaljne upute:** [`QUICK_START.md`](QUICK_START.md)
 
 **1. Baza podataka:**
 ```powershell
@@ -64,7 +57,7 @@ npm start
 ```
 Frontend: **http://localhost:3000**
 
-### 🔐 Demo pristupni podaci
+###  Demo pristupni podaci
 
 | Uloga | Username | Password | Opis |
 |-------|----------|----------|------|
@@ -164,12 +157,12 @@ CREATE DOMAIN email_address AS VARCHAR(100)
 
 ### Stranice
 
-1. **🔑 Login** - JWT autentikacija
-2. **📊 Dashboard** - Statistike i pregled zadataka
-3. **👥 Users** - CRUD za korisnike (prikazuje `v_users_with_roles` view)
-4. **📋 Tasks** - CRUD za zadatke (koristi `task_status` i `task_priority` ENUM-e)
-5. **🔐 Roles** - Dodjela i upravljanje ulogama
-6. **📝 Audit Logs** - Prikaz svih promjena (triggeri `trg_audit_*`)
+1. ** Login** - JWT autentikacija
+2. ** Dashboard** - Statistike i pregled zadataka
+3. ** Users** - CRUD za korisnike (prikazuje `v_users_with_roles` view)
+4. ** Tasks** - CRUD za zadatke (koristi `task_status` i `task_priority` ENUM-e)
+5. ** Roles** - Dodjela i upravljanje ulogama
+6. ** Audit Logs** - Prikaz svih promjena (triggeri `trg_audit_*`)
 
 ### Demonstracija PostgreSQL značajki
 
