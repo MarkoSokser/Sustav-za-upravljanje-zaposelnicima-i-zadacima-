@@ -360,12 +360,13 @@ SELECT
     r.name AS role_name,
     r.description AS role_description,
     r.is_system,
-    ARRAY_AGG(p.code ORDER BY p.category, p.code) AS permissions,
-    COUNT(DISTINCT ur.user_id) AS user_count
+    ARRAY_AGG(DISTINCT p.code ORDER BY p.code) FILTER (WHERE p.code IS NOT NULL) AS permissions,
+    (SELECT COUNT(DISTINCT ur.user_id) 
+     FROM user_roles ur 
+     WHERE ur.role_id = r.role_id) AS user_count
 FROM roles r
 LEFT JOIN role_permissions rp ON r.role_id = rp.role_id
 LEFT JOIN permissions p ON rp.permission_id = p.permission_id
-LEFT JOIN user_roles ur ON r.role_id = ur.role_id
 GROUP BY r.role_id, r.name, r.description, r.is_system;
 
 COMMENT ON VIEW v_roles_with_permissions IS 'Pregled uloga s dodijeljenim pravima';

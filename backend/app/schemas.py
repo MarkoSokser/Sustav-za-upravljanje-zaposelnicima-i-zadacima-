@@ -105,8 +105,9 @@ class UserResponse(UserBase):
 
 
 class UserWithRoles(UserResponse):
-    """Korisnik s ulogama"""
+    """Korisnik s ulogama i permisijama"""
     roles: List[str] = []
+    permissions: List[str] = []
     manager_username: Optional[str] = None
     manager_full_name: Optional[str] = None
 
@@ -234,8 +235,15 @@ class TaskResponse(TaskBase):
         from_attributes = True
 
 
-class TaskDetails(TaskResponse):
+class TaskDetails(TaskBase):
     """Detaljni prikaz zadatka"""
+    task_id: int
+    status: TaskStatus
+    created_by: int
+    assigned_to: Optional[int] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
     creator_id: int
     creator_username: str
     creator_name: str
