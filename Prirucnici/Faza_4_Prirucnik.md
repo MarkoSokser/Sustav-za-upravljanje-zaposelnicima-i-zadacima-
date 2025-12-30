@@ -39,13 +39,14 @@ psql -U postgres -d employee_db -f 02_seed_data.sql
 ENUM tipovi osiguravaju da atribut može imati samo unaprijed definirane vrijednosti.
 
 ```sql
--- Status zadatka
+-- Status zadatka (ažurirano s PENDING_APPROVAL)
 CREATE TYPE task_status AS ENUM (
-    'NEW',           
-    'IN_PROGRESS',   
-    'ON_HOLD',       
-    'COMPLETED',     
-    'CANCELLED'      
+    'NEW',              -- Novi zadatak
+    'IN_PROGRESS',      -- U tijeku
+    'ON_HOLD',          -- Na čekanju
+    'PENDING_APPROVAL', -- Čeka odobrenje managera (NOVO)
+    'COMPLETED',        -- Završeno
+    'CANCELLED'         -- Otkazano
 );
 
 -- Prioritet zadatka
@@ -63,6 +64,17 @@ CREATE TYPE audit_action AS ENUM (
     'DELETE'         
 );
 ```
+
+**Workflow statusa zadataka:**
+```
+NEW → IN_PROGRESS → PENDING_APPROVAL → COMPLETED
+                  ↓                   ↑
+              ON_HOLD ←───────────────┘ (Manager vraća na doradu)
+```
+
+- **Employee** može staviti: NEW, IN_PROGRESS, ON_HOLD, PENDING_APPROVAL
+- **Manager/Admin** može odobriti: PENDING_APPROVAL → COMPLETED
+- **Manager/Admin** može vratiti: PENDING_APPROVAL → IN_PROGRESS
 
 **Prednosti ENUM tipova:**
 - Validacija na razini baze podataka
@@ -129,8 +141,41 @@ CREATE DOMAIN username_type AS VARCHAR(50)
 | `tasks` | Glavni | 11 | Zadaci |
 | `user_roles` | Povezni | 5 | Veza korisnik-uloga (M:N) |
 | `role_permissions` | Povezni | 4 | Veza uloga-pravo (M:N) |
+| `user_permissions` | Povezni | 6 | **NOVO** - Direktna dodjela prava korisnicima |
+| `task_assignees` | Povezni | 5 | **NOVO** - Višestruka dodjela zadataka |
 | `login_events` | Audit | 8 | Evidencija prijava |
 | `audit_log` | Audit | 9 | Evidencija promjena |
+
+### 4.4.1.1 Nova tablica: user_permissions
+
+```sql
+CREATE TABLE user_permissions (
+    user_permission_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    permission_id INTEGER NOT NULL REFERENCES permissions(permission_id) ON DELETE CASCADE,
+    is_granted BOOLEAN NOT NULL DEFAULT TRUE,  -- TRUE = dozvoljeno, FALSE = zabranjeno
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assigned_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    CONSTRAINT uk_user_permissions UNIQUE (user_id, permission_id)
+);
+```
+
+**Svrha:** Omogućuje administratoru direktnu dodjelu ili oduzimanje permisija korisnicima, neovisno o ulogama.
+
+### 4.4.1.2 Nova tablica: task_assignees
+
+```sql
+CREATE TABLE task_assignees (
+    task_assignee_id SERIAL PRIMARY KEY,
+    task_id INTEGER NOT NULL REFERENCES tasks(task_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assigned_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    CONSTRAINT uk_task_assignees UNIQUE (task_id, user_id)
+);
+```
+
+**Svrha:** Omogućuje dodjelu jednog zadatka većem broju korisnika.
 
 ---
 

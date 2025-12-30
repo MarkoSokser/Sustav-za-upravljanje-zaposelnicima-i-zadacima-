@@ -76,7 +76,25 @@
 2. **Format lozinki:** Početno slovo + godina + poseban znak
 3. **Za testiranje:** Preporučamo korištenje admin, ivan_manager ili marko_dev računa
 4. **Sigurnost:** Ove lozinke su samo za razvojno okruženje - u produkciji koristite jače lozinke
+5. **Promjena lozinke:** Svi korisnici mogu promijeniti svoju lozinku kroz modal u aplikaciji
 
 ## Potrebno nakon instalacije
 
-Nakon što pokrenete SQL skriptu `02_seed_data.sql`, sve ove lozinke će biti aktivne i spremne za korištenje.
+Nakon što pokrenete SQL skripte, sve ove lozinke će biti aktivne:
+```bash
+# Redoslijed izvršavanja SQL skripti
+database/01_schema.sql
+database/02_seed_data.sql
+database/03_functions_procedures.sql
+database/04_multi_assignees_migration.sql
+```
+
+## Tijek odobravanja zadataka
+
+| Uloga | Može postaviti status |
+|-------|----------------------|
+| **EMPLOYEE** | TODO, IN_PROGRESS, PENDING_APPROVAL, CANCELLED |
+| **MANAGER** | TODO, IN_PROGRESS, PENDING_APPROVAL, COMPLETED, CANCELLED |
+| **ADMIN** | Sve statuse |
+
+**Napomena:** EMPLOYEE može predložiti završetak (PENDING_APPROVAL), ali samo MANAGER/ADMIN može odobriti (COMPLETED).

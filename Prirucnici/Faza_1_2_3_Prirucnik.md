@@ -50,8 +50,10 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 16. Administrator može dodjeljivati uloge korisnicima.
 17. Administrator može uklanjati uloge korisnicima.
 18. Administrator može definirati prava pristupa za svaku ulogu.
-19. Sustav mora na temelju prava pristupa ograničiti izvršavanje radnji.
-20. Sustav mora na temelju prava pristupa prilagoditi prikaz funkcionalnosti.
+19. **Administrator može dodjeljivati/oduzimati direktne permisije pojedinačnim korisnicima.**
+20. Sustav mora na temelju prava pristupa ograničiti izvršavanje radnji.
+21. Sustav mora na temelju prava pristupa prilagoditi prikaz funkcionalnosti.
+22. **Sustav mora kombinirati permisije iz uloga i direktnih dodjela (hibridni RBAC).**
 
 ### Upravljanje zadacima
 21. Manager može kreirati nove zadatke.
@@ -60,11 +62,12 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 24. Manager može pregledati sve zadatke unutar svog tima.
 25. Manager može brisati zadatke koje je kreirao.
 26. Employee može pregledati vlastite zadatke.
-27. Employee može ažurirati status vlastitih zadataka.
-28. Administrator može pregledati sve zadatke u sustavu.
-29. Administrator može uređivati sve zadatke u sustavu.
-30. Administrator može brisati sve zadatke u sustavu.
-31. **Zadatak može biti dodijeljen većem broju korisnika istovremeno (timski rad).**
+27. **Employee može predložiti završetak zadatka (status PENDING_APPROVAL).**
+28. **Manager/Admin može odobriti završetak zadatka (status COMPLETED).**
+29. Administrator može pregledati sve zadatke u sustavu.
+30. Administrator može uređivati sve zadatke u sustavu.
+31. Administrator može brisati sve zadatke u sustavu.
+32. **Zadatak može biti dodijeljen većem broju korisnika istovremeno (timski rad).**
 
 ### Meta-podaci i audit
 31. Sustav mora bilježiti sve prijave korisnika (vrijeme, IP adresa, uspješnost).
@@ -114,9 +117,19 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 | **Permission** | Pojedinačno pravo pristupa |
 | **UserRole** | Veza korisnika i uloge (M:N) |
 | **RolePermission** | Veza uloge i prava (M:N) |
+| **UserPermission** | Direktna dodjela permisije korisniku (hibridni RBAC) |
 | **Task** | Zadatak dodijeljen korisniku |
+| **TaskAssignee** | Veza zadatka i korisnika za višestruku dodjelu (M:N) |
 | **LoginEvent** | Evidencija prijava u sustav |
 | **AuditLog** | Evidencija promjena nad podacima |
+
+### Tijek statusa zadataka
+```
+TODO → IN_PROGRESS → PENDING_APPROVAL → COMPLETED
+                  ↘ CANCELLED
+```
+- **PENDING_APPROVAL**: Zaposlenik predlaže završetak
+- **COMPLETED**: Manager/Admin odobrava završetak
 
 ---
 
