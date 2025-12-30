@@ -1,11 +1,34 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
+// Interval za osvježavanje permisija (30 sekundi)
+const PERMISSION_REFRESH_INTERVAL = 30000;
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Funkcija za osvježavanje korisničkih podataka (uključujući permisije)
+  const refreshUserData = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await authAPI.getCurrentUser();
+      setUser(response.data);
+      localStorage.setItem('user', JSON.stringify(response.data));
+    } catch (error) {
+      console.error('Greška pri osvježavanju korisničkih podataka:', error);
+      // Ako je 401, token je istekao
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // Provjeri je li korisnik već prijavljen
@@ -43,6 +66,17 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   }, []);
+
+  // Automatsko osvježavanje permisija svakih 30 sekundi
+  useEffect(() => {
+    if (!user) return;
+
+    const intervalId = setInterval(() => {
+      refreshUserData();
+    }, PERMISSION_REFRESH_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, [user, refreshUserData]);
 
   const login = async (username, password) => {
     try {
@@ -133,6 +167,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     isManager,
     isAuthenticated: !!user,
+    refreshUserData, // Za ručno osvježavanje permisija
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
