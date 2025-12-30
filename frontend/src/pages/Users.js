@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usersAPI, rolesAPI } from '../services/api';
+import { formatErrorMessage } from '../utils/errorHandler';
 import './Users.css';
 
 const Users = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user: currentUser, isManager } = useAuth();
   const [users, setUsers] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -13,6 +15,7 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [viewMode, setViewMode] = useState('all'); // 'all', 'team', 'self'
 
   const [formData, setFormData] = useState({
     username: '',
@@ -27,13 +30,36 @@ const Users = () => {
   useEffect(() => {
     loadUsers();
     loadRoles();
-  }, []);
+    if (isManager() && currentUser) {
+      loadTeam();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadTeam = async () => {
+    try {
+      const response = await usersAPI.getTeam(currentUser.user_id);
+      setTeamMembers(response.data);
+    } catch (error) {
+      console.error('Greška pri učitavanju tima:', error);
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const response = await usersAPI.getAll();
-      setUsers(response.data);
+      // Ako korisnik nema USER_READ_ALL, prikazi samo vlastite podatke
+      if (!hasPermission('USER_READ_ALL')) {
+        if (currentUser) {
+          // Dohvati vlastite podatke preko /users/{id}
+          const response = await usersAPI.getById(currentUser.user_id);
+          setUsers([response.data]);
+        } else {
+          setUsers([]);
+        }
+      } else {
+        const response = await usersAPI.getAll();
+        setUsers(response.data);
+      }
     } catch (error) {
       if (error.response?.status === 403) {
         setError('Nemate pristup ovoj stranici. Potrebne su dodatne permisije.');
@@ -47,6 +73,10 @@ const Users = () => {
   };
 
   const loadRoles = async () => {
+    // Samo ucitaj uloge ako ima permisiju
+    if (!hasPermission('ROLE_READ')) {
+      return;
+    }
     try {
       const response = await rolesAPI.getAll();
       setRoles(response.data);
@@ -115,22 +145,8 @@ const Users = () => {
         setSuccess('');
       }, 1500);
     } catch (error) {
-      // Parsiranje FastAPI validation errors
-      let errorMsg = 'Greška pri spremanju korisnika';
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (typeof detail === 'string') {
-          errorMsg = detail;
-        } else if (Array.isArray(detail)) {
-          // Validation errors - ekstrakcija poruka
-          errorMsg = detail.map(err => {
-            const field = err.loc?.join('.') || 'polje';
-            const msg = err.msg || err.message || 'nepoznata greška';
-            return `${field}: ${msg}`;
-          }).join('; ');
-        }
-      }
-      setError(errorMsg);
+      console.error('User save error:', error);
+      setError(formatErrorMessage(error, 'Greška pri spremanju korisnika.'));
     }
   };
 
@@ -145,23 +161,27 @@ const Users = () => {
       loadUsers();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Greška pri brisanju korisnika';
-      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+      console.error('User delete error:', error);
+      setError(formatErrorMessage(error, 'Greška pri brisanju korisnika.'));
     }
   };
 
   const handleToggleActive = async (userId, isActive) => {
     try {
       if (isActive) {
+        // Deaktiviraj korisnika
         await usersAPI.deactivate(userId);
+        setSuccess('Korisnik uspješno deaktiviran');
       } else {
+        // Aktiviraj korisnika
         await usersAPI.activate(userId);
+        setSuccess('Korisnik uspješno aktiviran');
       }
-      setSuccess(`Korisnik uspješno ${isActive ? 'deaktiviran' : 'aktiviran'}`);
       loadUsers();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError('Greška pri promjeni statusa korisnika');
+      console.error('User status change error:', error);
+      setError(formatErrorMessage(error, 'Greška pri promjeni statusa korisnika.'));
     }
   };
 
@@ -170,18 +190,47 @@ const Users = () => {
   }
 
   const canCreate = hasPermission('USER_CREATE');
-  const canUpdate = hasPermission('USER_UPDATE');
+  const canUpdate = hasPermission('USER_UPDATE') || hasPermission('USER_UPDATE_ALL');
+  const canUpdateSelf = hasPermission('USER_UPDATE_SELF');
   const canDelete = hasPermission('USER_DELETE');
+  const canDeactivate = hasPermission('USER_DEACTIVATE');
 
   return (
     <div className="users-page">
       <div className="page-header">
         <h1>Korisnici</h1>
-        {canCreate && (
-          <button className="btn btn-primary" onClick={handleCreate}>
-            + Novi korisnik
-          </button>
-        )}
+        <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+          {/* Gumbi za prebacivanje pogleda */}
+          {hasPermission('USER_READ_ALL') && (
+            <button 
+              className={`btn ${viewMode === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setViewMode('all')}
+            >
+              Svi korisnici
+            </button>
+          )}
+          {isManager() && teamMembers.length > 0 && (
+            <button 
+              className={`btn ${viewMode === 'team' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setViewMode('team')}
+            >
+              Moj tim ({teamMembers.length})
+            </button>
+          )}
+          {!hasPermission('USER_READ_ALL') && (
+            <button 
+              className={`btn ${viewMode === 'self' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setViewMode('self')}
+            >
+              Moj profil
+            </button>
+          )}
+          {canCreate && (
+            <button className="btn btn-primary" onClick={handleCreate}>
+              + Novi korisnik
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -194,25 +243,25 @@ const Users = () => {
               <th>Korisničko ime</th>
               <th>Ime i prezime</th>
               <th>Email</th>
-              <th>Odjel</th>
+              {viewMode !== 'team' && <th>Odjel</th>}
               <th>Uloge</th>
               <th>Status</th>
               <th>Akcije</th>
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
+            {(viewMode === 'team' ? teamMembers : users).map(user => (
               <tr key={user.user_id}>
                 <td>{user.username}</td>
-                <td>{user.first_name} {user.last_name}</td>
+                <td>{user.first_name || user.full_name?.split(' ')[0]} {user.last_name || user.full_name?.split(' ').slice(1).join(' ')}</td>
                 <td>{user.email}</td>
-                <td>{user.department || '-'}</td>
+                {viewMode !== 'team' && <td>{user.department || '-'}</td>}
                 <td>
                   {user.roles?.map(role => (
                     <span key={role} className="badge badge-info" style={{marginRight: '5px'}}>
                       {role}
                     </span>
-                  ))}
+                  )) || '-'}
                 </td>
                 <td>
                   <span className={`badge ${user.is_active ? 'badge-success' : 'badge-danger'}`}>
@@ -221,23 +270,24 @@ const Users = () => {
                 </td>
                 <td>
                   <div className="action-buttons">
-                    {canUpdate && (
-                      <>
-                        <button 
-                          className="btn btn-primary btn-sm" 
-                          onClick={() => handleEdit(user)}
-                        >
-                          Uredi
-                        </button>
-                        <button 
-                          className={`btn ${user.is_active ? 'btn-secondary' : 'btn-success'} btn-sm`}
-                          onClick={() => handleToggleActive(user.user_id, user.is_active)}
-                        >
-                          {user.is_active ? 'Deaktiviraj' : 'Aktiviraj'}
-                        </button>
-                      </>
+                    {/* Prikaži Uredi ako ima USER_UPDATE ili ako je vlastiti profil */}
+                    {(canUpdate || (canUpdateSelf && user.user_id === currentUser?.user_id)) && (
+                      <button 
+                        className="btn btn-primary btn-sm" 
+                        onClick={() => handleEdit(user)}
+                      >
+                        Uredi
+                      </button>
                     )}
-                    {canDelete && (
+                    {canDeactivate && user.user_id !== currentUser?.user_id && (
+                      <button 
+                        className={`btn ${user.is_active ? 'btn-warning' : 'btn-success'} btn-sm`}
+                        onClick={() => handleToggleActive(user.user_id, user.is_active)}
+                      >
+                        {user.is_active ? 'Deaktiviraj' : 'Aktiviraj'}
+                      </button>
+                    )}
+                    {canDelete && user.user_id !== currentUser?.user_id && (
                       <button 
                         className="btn btn-danger btn-sm"
                         onClick={() => handleDelete(user.user_id)}
@@ -255,8 +305,8 @@ const Users = () => {
 
       {/* Modal za kreiranje/uređivanje */}
       {showModal && (
-        <div className="modal">
-          <div className="modal-content">
+        <div className="users-modal-overlay">
+          <div className="users-modal-content">
             <div className="modal-header">
               <h2>{isEditing ? 'Uredi korisnika' : 'Novi korisnik'}</h2>
               <button className="close" onClick={() => setShowModal(false)}>&times;</button>

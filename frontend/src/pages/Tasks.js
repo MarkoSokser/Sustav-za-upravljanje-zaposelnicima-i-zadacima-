@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { tasksAPI, usersAPI } from '../services/api';
+import TaskDetailsModal from '../components/TaskDetailsModal';
+import { formatErrorMessage } from '../utils/errorHandler';
 import './Tasks.css';
 
 const Tasks = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [taskDetails, setTaskDetails] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // Automatski postavi 'my' ako korisnik nema TASK_READ_ALL permisiju
+  const canReadAll = hasPermission('TASK_READ_ALL');
+  const canCreate = hasPermission('TASK_CREATE');
+  const [viewMode, setViewMode] = useState(canReadAll ? 'all' : 'my'); // 'all', 'my', or 'created'
   
   // Filteri
   const [statusFilter, setStatusFilter] = useState('');
@@ -23,23 +31,38 @@ const Tasks = () => {
     description: '',
     priority: 'MEDIUM',
     due_date: '',
-    assigned_to: '',
+    assigned_to_ids: [], // Promijenjeno u listu za višestruku dodjelu
   });
 
   useEffect(() => {
     loadTasks();
     loadUsers();
-  }, [statusFilter, priorityFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [statusFilter, priorityFilter, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTasks = async () => {
     setLoading(true);
     setError('');
     try {
-      const params = {};
-      if (statusFilter) params.status = statusFilter;
-      if (priorityFilter) params.priority = priorityFilter;
+      let response;
       
-      const response = await tasksAPI.getAll(params);
+      if (viewMode === 'my') {
+        // Učitaj samo zadatke dodijeljene meni
+        response = await tasksAPI.getMyTasks();
+      } else if (viewMode === 'created') {
+        // Učitaj zadatke koje sam ja kreirao (filtriraj na frontendu)
+        const allTasks = await tasksAPI.getAll({});
+        const myCreatedTasks = allTasks.data.filter(task => task.creator_id === user?.user_id);
+        response = { data: myCreatedTasks };
+      } else if (hasPermission('TASK_READ_ALL')) {
+        // Učitaj sve zadatke s filterima
+        const params = {};
+        if (statusFilter) params.status = statusFilter;
+        if (priorityFilter) params.priority = priorityFilter;
+        response = await tasksAPI.getAll(params);
+      } else {
+        // Fallback - učitaj samo moje zadatke
+        response = await tasksAPI.getMyTasks();
+      }
       setTasks(response.data);
     } catch (error) {
       if (error.response?.status === 403) {
@@ -54,6 +77,19 @@ const Tasks = () => {
   };
 
   const loadUsers = async () => {
+    // Samo ucitaj korisnike ako ima permisiju (za dropdown dodjele zadataka)
+    if (!hasPermission('USER_READ_ALL')) {
+      // Ako nema permisiju, postavi samo sebe kao opciju
+      if (user) {
+        setUsers([{
+          user_id: user.user_id,
+          username: user.username,
+          first_name: user.first_name,
+          last_name: user.last_name
+        }]);
+      }
+      return;
+    }
     try {
       const response = await usersAPI.getAll(true); // Samo aktivni
       setUsers(response.data);
@@ -70,11 +106,16 @@ const Tasks = () => {
       description: '',
       priority: 'MEDIUM',
       due_date: '',
-      assigned_to: '',
+      assigned_to_ids: [], // Prazna lista za višestruku dodjelu
     });
     setShowModal(true);
     setError('');
     setSuccess('');
+  };
+
+  const handleViewDetails = (task) => {
+    setTaskDetails(task);
+    setShowDetailsModal(true);
   };
 
   const handleEdit = (task) => {
@@ -85,7 +126,8 @@ const Tasks = () => {
       description: task.description || '',
       priority: task.priority,
       due_date: task.due_date ? task.due_date.split('T')[0] : '',
-      assigned_to: task.assigned_to || '',
+      // Koristi assignee_ids ako postoji, inače stari assigned_to
+      assigned_to_ids: task.assignee_ids || (task.assigned_to ? [task.assigned_to] : []),
     });
     setShowModal(true);
     setError('');
@@ -100,8 +142,14 @@ const Tasks = () => {
     try {
       const submitData = {
         ...formData,
-        assigned_to: formData.assigned_to ? parseInt(formData.assigned_to) : null,
+        // Šalje listu assignee-a
+        assigned_to_ids: formData.assigned_to_ids.map(id => parseInt(id)),
       };
+      
+      // Ukloni praznu listu ako nema assignee-a
+      if (submitData.assigned_to_ids.length === 0) {
+        delete submitData.assigned_to_ids;
+      }
 
       if (isEditing) {
         await tasksAPI.update(selectedTask.task_id, submitData);
@@ -117,21 +165,8 @@ const Tasks = () => {
         setSuccess('');
       }, 1500);
     } catch (error) {
-      // Parsiranje FastAPI validation errors
-      let errorMsg = 'Greška pri spremanju zadatka';
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (typeof detail === 'string') {
-          errorMsg = detail;
-        } else if (Array.isArray(detail)) {
-          errorMsg = detail.map(err => {
-            const field = err.loc?.join('.') || 'polje';
-            const msg = err.msg || err.message || 'nepoznata greška';
-            return `${field}: ${msg}`;
-          }).join('; ');
-        }
-      }
-      setError(errorMsg);
+      console.error('Task save error:', error);
+      setError(formatErrorMessage(error));
     }
   };
 
@@ -146,8 +181,8 @@ const Tasks = () => {
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Greška pri brisanju zadatka';
-      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+      console.error('Task delete error:', error);
+      setError(formatErrorMessage(error));
     }
   };
 
@@ -158,7 +193,9 @@ const Tasks = () => {
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError('Greška pri promjeni statusa');
+      console.error('Status change error:', error);
+      setError(formatErrorMessage(error));
+      setTimeout(() => setError(''), 5000);
     }
   };
 
@@ -167,10 +204,60 @@ const Tasks = () => {
       'NEW': 'badge-info',
       'IN_PROGRESS': 'badge-warning',
       'ON_HOLD': 'badge-warning',
+      'PENDING_APPROVAL': 'badge-pending',
       'COMPLETED': 'badge-success',
       'CANCELLED': 'badge-danger'
     };
     return statusMap[status] || 'badge-info';
+  };
+
+  const getStatusLabel = (status) => {
+    const labelMap = {
+      'NEW': 'Novo',
+      'IN_PROGRESS': 'U tijeku',
+      'ON_HOLD': 'Na čekanju',
+      'PENDING_APPROVAL': '⏳ Čeka odobrenje',
+      'COMPLETED': 'Završeno',
+      'CANCELLED': 'Otkazano'
+    };
+    return labelMap[status] || status;
+  };
+
+  // Provjeri je li korisnik manager ili admin
+  const isManagerOrAdmin = hasPermission('TASK_UPDATE_ANY') || 
+                           user?.roles?.some(r => r.name === 'ADMIN' || r.name === 'MANAGER');
+
+  // Opcije statusa ovisno o ulozi i trenutnom statusu zadatka
+  const getStatusOptions = (currentStatus) => {
+    // Manager/Admin mogu:
+    // - Ako je zadatak u PENDING_APPROVAL -> mogu staviti COMPLETED (odobriti) ili vratiti
+    // - Inače -> sve opcije OSIM COMPLETED (moraju čekati da employee preda na odobrenje)
+    if (isManagerOrAdmin) {
+      if (currentStatus === 'PENDING_APPROVAL') {
+        return [
+          { value: 'PENDING_APPROVAL', label: '⏳ Čeka odobrenje' },
+          { value: 'IN_PROGRESS', label: '↩️ Vrati na doradu' },
+          { value: 'COMPLETED', label: '✅ Odobri završetak' },
+          { value: 'CANCELLED', label: 'Otkazano' }
+        ];
+      }
+      // Za ostale statuse - manager NE MOŽE staviti COMPLETED direktno
+      return [
+        { value: 'NEW', label: 'Novo' },
+        { value: 'IN_PROGRESS', label: 'U tijeku' },
+        { value: 'ON_HOLD', label: 'Na čekanju' },
+        { value: 'PENDING_APPROVAL', label: '⏳ Predaj na odobrenje' },
+        { value: 'CANCELLED', label: 'Otkazano' }
+        // COMPLETED je NAMJERNO IZOSTAVLJEN - mora proći kroz PENDING_APPROVAL
+      ];
+    }
+    // Employee vidi ograničene opcije - NE može direktno COMPLETED
+    return [
+      { value: 'NEW', label: 'Novo' },
+      { value: 'IN_PROGRESS', label: 'U tijeku' },
+      { value: 'ON_HOLD', label: 'Na čekanju' },
+      { value: 'PENDING_APPROVAL', label: '📤 Predaj na odobrenje' }
+    ];
   };
 
   const getPriorityBadge = (priority) => {
@@ -186,19 +273,47 @@ const Tasks = () => {
     return <div className="loading">Učitavanje...</div>;
   }
 
-  const canCreate = hasPermission('TASK_CREATE');
-  const canUpdate = hasPermission('TASK_UPDATE');
+  const canUpdate = hasPermission('TASK_UPDATE') || hasPermission('TASK_UPDATE_ANY');
+  const canUpdateSelfStatus = hasPermission('TASK_UPDATE_SELF_STATUS');
   const canDelete = hasPermission('TASK_DELETE');
+  const canReadSelf = hasPermission('TASK_READ_SELF');
 
   return (
     <div className="tasks-page">
       <div className="page-header">
         <h1>Zadaci</h1>
-        {canCreate && (
-          <button className="btn btn-primary" onClick={handleCreate}>
-            + Novi zadatak
-          </button>
-        )}
+        <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+          {/* Gumbi za prebacivanje pogleda - prikazuje se ako ima TASK_READ_ALL */}
+          {canReadAll && (
+            <>
+              <button 
+                className={`btn ${viewMode === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setViewMode('all')}
+              >
+                Svi zadaci
+              </button>
+              <button 
+                className={`btn ${viewMode === 'my' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setViewMode('my')}
+              >
+                Moji zadaci
+              </button>
+              {canCreate && (
+                <button 
+                  className={`btn ${viewMode === 'created' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setViewMode('created')}
+                >
+                  Kreirani zadaci
+                </button>
+              )}
+            </>
+          )}
+          {canCreate && (
+            <button className="btn btn-primary" onClick={handleCreate}>
+              + Novi zadatak
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -213,6 +328,7 @@ const Tasks = () => {
             <option value="NEW">Novo</option>
             <option value="IN_PROGRESS">U tijeku</option>
             <option value="ON_HOLD">Na čekanju</option>
+            <option value="PENDING_APPROVAL">⏳ Čeka odobrenje</option>
             <option value="COMPLETED">Završeno</option>
             <option value="CANCELLED">Otkazano</option>
           </select>
@@ -245,7 +361,13 @@ const Tasks = () => {
             {tasks.map(task => (
               <tr key={task.task_id}>
                 <td>
-                  <strong>{task.title}</strong>
+                  <strong 
+                    style={{cursor: 'pointer', color: '#667eea'}} 
+                    onClick={() => handleViewDetails(task)}
+                    title="Klikni za detalje"
+                  >
+                    {task.title}
+                  </strong>
                   {task.description && (
                     <div style={{fontSize: '12px', color: '#666', marginTop: '5px'}}>
                       {task.description.substring(0, 50)}...
@@ -253,21 +375,21 @@ const Tasks = () => {
                   )}
                 </td>
                 <td>
-                  {canUpdate ? (
+                  {/* Prikaži dropdown za promjenu statusa ako korisnik ima prava */}
+                  {(canUpdate || (canUpdateSelfStatus && task.assignee_ids?.includes(user?.user_id))) && 
+                   task.status !== 'COMPLETED' && task.status !== 'CANCELLED' ? (
                     <select 
                       value={task.status}
                       onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
                       className="status-select"
                     >
-                      <option value="NEW">Novo</option>
-                      <option value="IN_PROGRESS">U tijeku</option>
-                      <option value="ON_HOLD">Na čekanju</option>
-                      <option value="COMPLETED">Završeno</option>
-                      <option value="CANCELLED">Otkazano</option>
+                      {getStatusOptions(task.status).map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   ) : (
                     <span className={`badge ${getStatusBadge(task.status)}`}>
-                      {task.status}
+                      {getStatusLabel(task.status)}
                     </span>
                   )}
                 </td>
@@ -276,7 +398,12 @@ const Tasks = () => {
                     {task.priority}
                   </span>
                 </td>
-                <td>{task.assigned_to_name || '-'}</td>
+                <td>
+                  {/* Prikaz svih dodijeljenih korisnika */}
+                  {task.assignee_names && task.assignee_names.length > 0 
+                    ? task.assignee_names.join(', ')
+                    : (task.assignee_name || '-')}
+                </td>
                 <td>{task.created_by_name}</td>
                 <td>
                   {task.due_date ? (
@@ -287,6 +414,13 @@ const Tasks = () => {
                 </td>
                 <td>
                   <div className="action-buttons">
+                    <button 
+                      className="btn btn-info btn-sm" 
+                      onClick={() => handleViewDetails(task)}
+                      title="Prikaži detalje"
+                    >
+                      Detalji
+                    </button>
                     {canUpdate && (
                       <button 
                         className="btn btn-primary btn-sm" 
@@ -363,18 +497,25 @@ const Tasks = () => {
               </div>
 
               <div className="form-group">
-                <label>Dodijeli korisniku</label>
+                <label>Dodijeli korisnicima (možete odabrati više)</label>
                 <select
-                  value={formData.assigned_to}
-                  onChange={(e) => setFormData({...formData, assigned_to: e.target.value})}
+                  multiple
+                  value={formData.assigned_to_ids.map(String)}
+                  onChange={(e) => {
+                    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                    setFormData({...formData, assigned_to_ids: selectedOptions});
+                  }}
+                  style={{minHeight: '120px'}}
                 >
-                  <option value="">-- Nije dodijeljeno --</option>
                   {users.map(u => (
                     <option key={u.user_id} value={u.user_id}>
                       {u.first_name} {u.last_name} ({u.username})
                     </option>
                   ))}
                 </select>
+                <small style={{color: '#666', marginTop: '5px', display: 'block'}}>
+                  Držite Ctrl (Windows) ili Cmd (Mac) za odabir više korisnika
+                </small>
               </div>
 
               {error && <div className="error">{error}</div>}
@@ -391,6 +532,14 @@ const Tasks = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal za detalje zadatka */}
+      {showDetailsModal && taskDetails && (
+        <TaskDetailsModal 
+          task={taskDetails} 
+          onClose={() => setShowDetailsModal(false)} 
+        />
       )}
     </div>
   );

@@ -3,9 +3,13 @@
 ## Pregled
 
 Faza 5 implementira aktivnu bazu podataka sa:
-- **11 funkcija** za validaciju i dohvat podataka
-- **10 procedura** za CRUD operacije
+- **12 funkcija** za validaciju i dohvat podataka
+- **11 procedura** za CRUD operacije
 - **7 triggera** za automatizaciju
+
+### Nove značajke
+- **Tijek odobravanja zadataka** - PENDING_APPROVAL status
+- **Provjera direktnih permisija** - user_permissions tablica
 
 ---
 
@@ -51,20 +55,37 @@ SELECT * FROM check_password_strength('Strong@Pass123');
 ### `user_has_permission(user_id, permission_code) → BOOLEAN`
 Provjerava da li korisnik ima odredjenu permisiju.
 
+**NOVO:** Ova funkcija sada provjerava:
+1. Permisije kroz uloge (role_permissions)
+2. Direktne permisije (user_permissions tablica)
+3. Negacija permisija (is_granted = false)
+
 ```sql
 -- Admin moze brisati zadatke?
 SELECT user_has_permission(1, 'TASK_DELETE');  -- TRUE
 
 -- Employee moze brisati zadatke?
 SELECT user_has_permission(4, 'TASK_DELETE');  -- FALSE
+
+-- Employee s direktno dodijeljenom permisijom
+SELECT user_has_permission(4, 'AUDIT_READ_ALL');  -- TRUE ako je direktno dodijeljena
 ```
 
 ### `get_user_permissions(user_id) → TABLE`
-Vraca sve permisije korisnika kroz njegove uloge.
+Vraca sve permisije korisnika kroz njegove uloge I direktne dodjele.
 
 ```sql
 SELECT * FROM get_user_permissions(1);
--- Vraca 24 permisije za ADMIN-a
+-- Vraca sve permisije za ADMIN-a (ukljucuje direktne)
+```
+
+### `get_user_direct_permissions(user_id) → TABLE`
+**NOVA FUNKCIJA** - Vraca samo direktno dodijeljene permisije korisnika.
+
+```sql
+SELECT * FROM get_user_direct_permissions(4);
+-- permission_code | is_granted | granted_at
+-- AUDIT_READ_ALL  | true       | 2025-01-15
 ```
 
 ### `get_user_roles(user_id) → TABLE`
@@ -176,16 +197,25 @@ CALL create_task(
 ```
 
 ### `update_task_status(task_id, new_status, updated_by)`
-Azurira status zadatka sa validacijom permisija.
+Azurira status zadatka sa validacijom permisija i tijeka odobravanja.
 
 ```sql
-CALL update_task_status(1, 'COMPLETED', 4);
+CALL update_task_status(1, 'PENDING_APPROVAL', 4);  -- Zaposlenik predlaze zavrsetak
+CALL update_task_status(1, 'COMPLETED', 2);         -- Manager odobrava
 ```
 
 **Pravila:**
 - Korisnik mora biti assignee, kreator, ili imati TASK_UPDATE_ANY permisiju
 - Zavrseni zadaci se ne mogu ponovo otvoriti
 - Otkazani zadaci se ne mogu mijenjati
+
+**Tijek odobravanja:**
+```
+TODO → IN_PROGRESS → PENDING_APPROVAL → COMPLETED
+                  ↘ CANCELLED
+```
+- **Zaposlenik**: moze postaviti PENDING_APPROVAL (predlaze zavrsetak)
+- **Manager/Admin**: moze postaviti COMPLETED (odobrava zavrsetak)
 
 ### `assign_task(task_id, assignee_id, assigned_by)`
 Dodjeljuje zadatak korisniku.

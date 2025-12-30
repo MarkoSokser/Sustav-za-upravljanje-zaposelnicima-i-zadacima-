@@ -105,7 +105,7 @@ Sve rute osim login stranice su zaštićene:
 ### 1.  Login stranica (`/login`)
 
 **Prikaz funkcionalnosti baze:**
-- Procedura: `sp_login_user`
+- Procedura: `log_login_attempt()`
 - Tablica: `login_events`
 - Funkcija: `validate_email`
 
@@ -115,10 +115,30 @@ Sve rute osim login stranice su zaštićene:
 - Automatsko bilježenje login pokušaja u bazu
 - Preusmjeravanje na dashboard nakon uspješne prijave
 
-**Demo pristupni podaci:**
-- **ADMIN**: admin / admin123
-- **MANAGER**: jnovak / manager123
-- **EMPLOYEE**: ahorvat / employee123
+**Pristupni podaci za testiranje:**
+
+| Uloga | Korisničko ime | Lozinka |
+|-------|----------------|---------|
+| **ADMIN** | admin | Admin123! |
+| **MANAGER** | ivan_manager | IvanM2024! |
+| **MANAGER** | ana_manager | AnaK2024! |
+| **EMPLOYEE** | marko_dev | Marko2024! |
+| **EMPLOYEE** | petra_dev | Petra2024! |
+| **EMPLOYEE** | luka_dev | Luka2024! |
+| **EMPLOYEE** | maja_design | Maja2024! |
+| **EMPLOYEE** | tomislav_design | Tomi2024! |
+
+---
+
+### 1.1  Promjena lozinke (NOVO)
+
+**Funkcionalnost:** Korisnik može promijeniti svoju lozinku putem modala u headeru (ikona 🔑).
+
+**Validacija:**
+- Trenutna lozinka mora biti ispravna
+- Nova lozinka: minimalno 8 znakova, veliko slovo, malo slovo, broj
+
+**Backend endpoint:** `POST /api/auth/change-password`
 
 ---
 
@@ -198,32 +218,52 @@ CALL sp_create_user(
 
 **Prikaz funkcionalnosti baze:**
 - View: `v_tasks_details`
-- Procedura: `sp_create_task`
-- Procedura: `sp_update_task`
-- Procedura: `sp_update_task_status`
-- Procedura: `sp_assign_task`
+- Procedura: `create_task()`
+- Procedura: `update_task_status()`
+- Tablica: `task_assignees` (višestruka dodjela)
 - Funkcija: `get_user_tasks(user_id)`
 - Funkcija: `get_overdue_tasks()`
-- ENUM: `task_status` (TODO, IN_PROGRESS, COMPLETED, CANCELLED)
-- ENUM: `task_priority` (LOW, MEDIUM, HIGH)
-- COMPOSITE: `timestamp_metadata`
+- ENUM: `task_status` (NEW, IN_PROGRESS, ON_HOLD, PENDING_APPROVAL, COMPLETED, CANCELLED)
+- ENUM: `task_priority` (LOW, MEDIUM, HIGH, URGENT)
 - Trigger: `trg_audit_tasks`
 - Trigger: `trg_update_tasks_timestamp`
 
 **Funkcionalnosti:**
 - **Prikaz svih zadataka** - View `v_tasks_details`
-- **Kreiranje zadatka** - Procedura `sp_create_task`
-- **Uređivanje zadatka** - Procedura `sp_update_task`
-- **Promjena statusa** - Procedura `sp_update_task_status`
-- **Dodjela korisniku** - Procedura `sp_assign_task`
+- **Moji zadaci** - Endpoint `/my` s task_assignees
+- **Kreiranje zadatka** - Procedura `create_task()`
+- **Višestruka dodjela** - Tablica `task_assignees`
+- **Promjena statusa** - S workflow odobravanja
 - **Filter po statusu** - ENUM `task_status`
 - **Filter po prioritetu** - ENUM `task_priority`
-- **Prikaz overdue zadataka** - Funkcija `get_overdue_tasks()`
+
+**Workflow odobravanja zadataka (NOVO):**
+
+```
+┌─────────┐     ┌─────────────┐     ┌───────────────────┐     ┌───────────┐
+│   NEW   │ ──► │ IN_PROGRESS │ ──► │ PENDING_APPROVAL  │ ──► │ COMPLETED │
+└─────────┘     └─────────────┘     └───────────────────┘     └───────────┘
+                      │                      │
+                      ▼                      │ (Manager vraća)
+                ┌──────────┐                 │
+                │ ON_HOLD  │ ◄───────────────┘
+                └──────────┘
+```
+
+**Pravila:**
+| Uloga | Može staviti |
+|-------|--------------|
+| Employee | NEW → IN_PROGRESS → ON_HOLD → PENDING_APPROVAL |
+| Manager/Admin | PENDING_APPROVAL → COMPLETED (odobravanje) |
+| Manager/Admin | PENDING_APPROVAL → IN_PROGRESS (vraćanje na doradu) |
 
 **Permisije:**
-- TASK_READ_ALL - Pregled zadataka
+- TASK_READ_ALL - Pregled svih zadataka
+- TASK_READ_SELF - Pregled svojih zadataka
 - TASK_CREATE - Kreiranje
 - TASK_UPDATE - Uređivanje
+- TASK_UPDATE_SELF_STATUS - Promjena statusa svojih zadataka
+- TASK_ASSIGN - Dodjela zadataka
 - TASK_DELETE - Brisanje
 
 **SQL pozadina:**
@@ -231,15 +271,12 @@ CALL sp_create_user(
 -- Prikaz zadataka
 SELECT * FROM v_tasks_details WHERE status = 'IN_PROGRESS';
 
--- Kreiranje zadatka
-CALL sp_create_task(
-  'Naslov zadatka', 'Opis', 
-  'HIGH'::task_priority, 
-  '2024-12-31', user_id, assigned_to
-);
+-- Višestruka dodjela (nova tablica)
+INSERT INTO task_assignees (task_id, user_id, assigned_by) 
+VALUES (1, 3, 2);
 
--- Promjena statusa (trigger automatski updatea timestamp)
-CALL sp_update_task_status(task_id, 'COMPLETED'::task_status);
+-- Promjena statusa s provjerom uloge
+CALL update_task_status(task_id, 'PENDING_APPROVAL', user_id);
 ```
 
 ---
@@ -248,13 +285,14 @@ CALL sp_update_task_status(task_id, 'COMPLETED'::task_status);
 
 **Prikaz funkcionalnosti baze:**
 - View: `v_roles_with_permissions`
-- Procedura: `sp_assign_role`
-- Procedura: `sp_remove_role`
+- Procedura: `assign_role()`
+- Procedura: `revoke_role()`
 - Funkcija: `user_has_permission(user_id, permission)`
 - Tablica: `roles`
 - Tablica: `permissions`
 - Tablica: `role_permissions` (many-to-many)
 - Tablica: `user_roles` (many-to-many)
+- **Tablica: `user_permissions`** (direktna dodjela permisija)
 - Trigger: `trg_audit_user_roles`
 
 **Funkcionalnosti:**
@@ -264,8 +302,31 @@ CALL sp_update_task_status(task_id, 'COMPLETED'::task_status);
 - **Uklanjanje uloge** - Procedura `sp_remove_role`
 - **Broj korisnika po ulozi** - Agregacija
 - **Zaštita sistemskih uloga** - Constraint
+- **Direktne permisije** - Dodaj/ukloni individualnu permisiju korisniku
 
-**RBAC Model:**
+**Hibridni RBAC Model:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    KORISNIK                                  │
+├─────────────────────────────────────────────────────────────┤
+│                         │                                    │
+│    ┌────────────────────┴────────────────────┐              │
+│    ▼                                          ▼              │
+│ ULOGE (roles)                    DIREKTNE PERMISIJE          │
+│ ┌─────────────┐                  ┌─────────────────────┐    │
+│ │ user_roles  │                  │ user_permissions    │    │
+│ └──────┬──────┘                  │ is_granted = true   │    │
+│        ▼                         │ is_granted = false  │    │
+│ role_permissions                 └─────────────────────┘    │
+│        │                                                     │
+│        ▼                                                     │
+│   PERMISIJE                                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Prioritet:** Direktne permisije > Permisije iz uloga
+
+**RBAC Model po ulogama:**
 ```
 ADMIN (role_id=1)
 ├── USER_READ_ALL
@@ -295,6 +356,12 @@ EMPLOYEE (role_id=3)
 └── USER_READ_OWN
 ```
 
+**UI za direktne permisije (Users stranica):**
+1. Otvori korisnika za uređivanje
+2. Klikni "Upravljanje permisijama"
+3. Odaberi permisije za dodati/ukloniti
+4. Spremi promjene
+
 **SQL pozadina:**
 ```sql
 -- Prikaz uloga s permisijama
@@ -303,8 +370,15 @@ SELECT * FROM v_roles_with_permissions;
 -- Dodjela uloge
 CALL sp_assign_role(user_id, role_id);
 
--- Provjera permisije
+-- Provjera permisije (uključuje direktne)
 SELECT user_has_permission(user_id, 'TASK_CREATE');
+
+-- Direktna dodjela permisije
+INSERT INTO user_permissions (user_id, permission_id, is_granted, granted_by)
+VALUES (4, 12, true, 1);
+
+-- Uklanjanje direktne permisije
+DELETE FROM user_permissions WHERE user_id = 4 AND permission_id = 12;
 ```
 
 ---

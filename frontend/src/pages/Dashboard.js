@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { tasksAPI } from '../services/api';
+import TaskDetailsModal from '../components/TaskDetailsModal';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -9,6 +10,8 @@ const Dashboard = () => {
   const [myTasks, setMyTasks] = useState([]);
   const [overdueTasks, setOverdueTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -32,6 +35,11 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTaskClick = (task) => {
+    setSelectedTask(task);
+    setShowDetailsModal(true);
   };
 
   const getStatusBadge = (status) => {
@@ -108,8 +116,13 @@ const Dashboard = () => {
             </thead>
             <tbody>
               {myTasks.slice(0, 5).map(task => (
-                <tr key={task.task_id}>
-                  <td>{task.title}</td>
+                <tr 
+                  key={task.task_id} 
+                  style={{cursor: 'pointer'}} 
+                  onClick={() => handleTaskClick(task)}
+                  title="Klikni za detalje"
+                >
+                  <td style={{color: '#667eea', fontWeight: '500'}}>{task.title}</td>
                   <td>
                     <span className={`badge ${getStatusBadge(task.status)}`}>
                       {task.status}
@@ -145,8 +158,13 @@ const Dashboard = () => {
             </thead>
             <tbody>
               {overdueTasks.slice(0, 5).map(task => (
-                <tr key={task.task_id}>
-                  <td>{task.title}</td>
+                <tr 
+                  key={task.task_id}
+                  style={{cursor: 'pointer'}} 
+                  onClick={() => handleTaskClick(task)}
+                  title="Klikni za detalje"
+                >
+                  <td style={{color: '#667eea', fontWeight: '500'}}>{task.title}</td>
                   <td>{task.assigned_to_name || '-'}</td>
                   <td>{new Date(task.due_date).toLocaleDateString('hr-HR')}</td>
                   <td>
@@ -157,6 +175,14 @@ const Dashboard = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Modal za detalje zadatka */}
+      {showDetailsModal && selectedTask && (
+        <TaskDetailsModal 
+          task={selectedTask} 
+          onClose={() => setShowDetailsModal(false)} 
+        />
       )}
     </div>
   );

@@ -78,9 +78,21 @@ const AuditLogs = () => {
 
   if (!hasPermission('AUDIT_READ_ALL')) {
     return (
-      <div className="container">
-        <h2>Nemate pristup audit logovima</h2>
-        <p>Za pristup ovoj stranici potrebna je permisija AUDIT_READ_ALL.</p>
+      <div className="no-permission-container">
+        <div className="no-permission-card">
+          <div className="permission-icon">🔒</div>
+          <h2>Pristup odbijen</h2>
+          <p className="permission-message">
+            Nemate dozvolu za pristup Audit logovima.
+          </p>
+          <div className="permission-details">
+            <p>Potrebna permisija: <strong>AUDIT_READ_ALL</strong></p>
+            <p>Molimo kontaktirajte administratora sustava za dodjelu potrebnih prava pristupa.</p>
+          </div>
+          <div className="contact-info">
+            <p>📧 Za pomoć kontaktirajte: <strong>admin@example.com</strong></p>
+          </div>
+        </div>
       </div>
     );
   }

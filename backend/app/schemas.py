@@ -16,6 +16,7 @@ class TaskStatus(str, Enum):
     NEW = "NEW"
     IN_PROGRESS = "IN_PROGRESS"
     ON_HOLD = "ON_HOLD"
+    PENDING_APPROVAL = "PENDING_APPROVAL"  # Employee završio, čeka odobrenje
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
 
@@ -92,6 +93,23 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class ChangePassword(BaseModel):
+    """Model za promjenu lozinke"""
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError('Nova lozinka mora sadrzavati barem jedno veliko slovo')
+        if not any(c.islower() for c in v):
+            raise ValueError('Nova lozinka mora sadrzavati barem jedno malo slovo')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Nova lozinka mora sadrzavati barem jedan broj')
+        return v
+
+
 class UserResponse(UserBase):
     """Response model korisnika"""
     user_id: int
@@ -137,6 +155,12 @@ class RoleBase(BaseModel):
 class RoleCreate(RoleBase):
     """Model za kreiranje uloge"""
     pass
+
+
+class RoleUpdate(BaseModel):
+    """Model za azuriranje uloge"""
+    name: Optional[str] = Field(None, min_length=1, max_length=50)
+    description: Optional[str] = None
 
 
 class RoleResponse(RoleBase):
@@ -188,6 +212,31 @@ class UserPermission(BaseModel):
     category: str
 
 
+class UserDirectPermission(BaseModel):
+    """Direktno dodijeljena permisija korisniku"""
+    permission_code: str
+    permission_name: str
+    category: str
+    granted: bool
+    assigned_at: Optional[datetime] = None
+    assigned_by_name: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class UserDirectPermissionAssign(BaseModel):
+    """Model za dodjelu direktne permisije korisniku"""
+    granted: bool = True
+    notes: Optional[str] = None
+
+
+class UserEffectivePermission(BaseModel):
+    """Efektivna permisija korisnika (iz uloge ili direktno)"""
+    permission_code: str
+    permission_name: str
+    category: str
+    source: str = 'ROLE'  # 'ROLE' ili 'DIRECT' - default ROLE za kompatibilnost
+
+
 # ============== TASK MODELS ==============
 
 class TaskBase(BaseModel):
@@ -200,7 +249,8 @@ class TaskBase(BaseModel):
 
 class TaskCreate(TaskBase):
     """Model za kreiranje zadatka"""
-    assigned_to: Optional[int] = None
+    assigned_to: Optional[int] = None  # Backward compatibility
+    assigned_to_ids: Optional[List[int]] = None  # Nova opcija za višestruku dodjelu
 
 
 class TaskUpdate(BaseModel):
@@ -209,6 +259,8 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     priority: Optional[TaskPriority] = None
     due_date: Optional[date] = None
+    assigned_to: Optional[int] = None  # Backward compatibility
+    assigned_to_ids: Optional[List[int]] = None  # Nova opcija za višestruku dodjelu
 
 
 class TaskStatusUpdate(BaseModel):
@@ -218,7 +270,8 @@ class TaskStatusUpdate(BaseModel):
 
 class TaskAssignment(BaseModel):
     """Model za dodjelu zadatka"""
-    assignee_id: int
+    assignee_id: Optional[int] = None  # Za jednu osobu (backward compatibility)
+    assignee_ids: Optional[List[int]] = None  # Za više osoba
 
 
 class TaskResponse(TaskBase):
@@ -250,6 +303,9 @@ class TaskDetails(TaskBase):
     assignee_id: Optional[int] = None
     assignee_username: Optional[str] = None
     assignee_name: Optional[str] = None
+    # Novi atributi za višestruke dodijele
+    assignee_ids: Optional[List[int]] = None
+    assignee_names: Optional[List[str]] = None
     due_status: Optional[str] = None
     is_overdue: bool = False
 

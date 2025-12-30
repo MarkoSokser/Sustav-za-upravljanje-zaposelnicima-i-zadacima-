@@ -54,6 +54,12 @@ export const authAPI = {
   
   logout: () => 
     api.post('/auth/logout'),
+  
+  changePassword: (currentPassword, newPassword) =>
+    api.post('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword
+    }),
 };
 
 // ==================== USERS API ====================
@@ -74,13 +80,16 @@ export const usersAPI = {
     api.delete(`/users/${userId}`),
   
   deactivate: (userId) => 
-    api.post(`/users/${userId}/deactivate`),
+    api.delete(`/users/${userId}`),
   
   activate: (userId) => 
     api.post(`/users/${userId}/activate`),
   
   getStatistics: (userId) => 
     api.get(`/users/${userId}/statistics`),
+  
+  getTeam: (userId) => 
+    api.get(`/users/${userId}/team`),
   
   getSubordinates: (managerId) => 
     api.get(`/users/${managerId}/subordinates`),
@@ -110,7 +119,7 @@ export const tasksAPI = {
     api.delete(`/tasks/${taskId}`),
   
   updateStatus: (taskId, status) => 
-    api.patch(`/tasks/${taskId}/status`, { status }),
+    api.put(`/tasks/${taskId}/status`, { status }),
   
   assignUser: (taskId, userId) => 
     api.post(`/tasks/${taskId}/assign`, { assigned_to: userId }),
@@ -148,14 +157,34 @@ export const rolesAPI = {
   assignToUser: (userId, roleName) => 
     api.post('/roles/assign', { user_id: userId, role_name: roleName }),
   
-  removeFromUser: (userId, roleId) => 
-    api.delete('/roles/remove', { data: { user_id: userId, role_id: roleId } }),
+  removeFromUser: (userId, roleName) => 
+    api.delete('/roles/revoke', { data: { user_id: userId, role_name: roleName } }),
   
   getPermissions: () => 
     api.get('/roles/permissions'),
   
   getUserRoles: (userId) => 
     api.get(`/roles/user/${userId}`),
+  
+  // Role Permissions (permisije uloge)
+  addPermissionToRole: (roleId, permissionCode) => 
+    api.post(`/roles/${roleId}/permissions/${permissionCode}`),
+  
+  removePermissionFromRole: (roleId, permissionCode) => 
+    api.delete(`/roles/${roleId}/permissions/${permissionCode}`),
+  
+  // User Permissions (direktna dodjela)
+  getUserDirectPermissions: (userId) => 
+    api.get(`/roles/users/${userId}/permissions`),
+  
+  getUserEffectivePermissions: (userId) => 
+    api.get(`/roles/users/${userId}/effective-permissions`),
+  
+  assignPermissionToUser: (userId, permissionCode, data = { granted: true }) => 
+    api.post(`/roles/users/${userId}/permissions/${permissionCode}`, data),
+  
+  removePermissionFromUser: (userId, permissionCode) => 
+    api.delete(`/roles/users/${userId}/permissions/${permissionCode}`),
 };
 
 // ==================== AUDIT API ====================

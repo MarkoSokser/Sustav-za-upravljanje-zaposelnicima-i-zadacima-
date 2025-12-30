@@ -12,6 +12,7 @@ Ovaj projekt demonstrira primjenu **poopćenih i objektno-relacijskih baza podat
 -  **React frontend aplikaciju** sa svim funkcionalnostima
 -  Potpuni RBAC sustav (3 uloge, 12 permisija)
 -  Automatski audit log putem PostgreSQL triggerah
+-  **Višestruka dodjela zadataka** (M:N veza - jedan zadatak može imati više assignee-a)
 
 ###  Tehnologije
 
@@ -37,6 +38,7 @@ CREATE DATABASE interni_sustav;
 \i database/01_schema.sql
 \i database/02_seed_data.sql
 \i database/03_functions_procedures.sql
+\i database/04_multi_assignees_migration.sql  # Višestruka dodjela zadataka
 ```
 
 **2. Backend:**
@@ -74,7 +76,8 @@ TBP_projekt/
 ├── database/                    # PostgreSQL baza
 │   ├── 01_schema.sql           # Shema (tablice, ENUM, COMPOSITE, domene, viewovi)
 │   ├── 02_seed_data.sql        # Početni podaci (demo korisnici)
-│   └── 03_functions_procedures.sql  # 11 funkcija, 10 procedura, 7 triggera
+│   ├── 03_functions_procedures.sql  # 11 funkcija, 10 procedura, 7 triggera
+│   └── 04_multi_assignees_migration.sql  # Višestruka dodjela zadataka (M:N)
 ├── backend/                     # FastAPI REST API
 │   ├── app/
 │   │   ├── main.py             # Glavna aplikacija
@@ -147,7 +150,13 @@ CREATE DOMAIN email_address AS VARCHAR(100)
 
 ### Pogledi (5)
 - `v_users_with_roles`, `v_roles_with_permissions`
-- `v_tasks_details`, `v_user_statistics`, `v_manager_team`
+- `v_tasks_details` (ažurirano za višestruku dodjelu)
+- `v_user_statistics`, `v_manager_team`
+
+### Tablice (9)
+- `users`, `roles`, `permissions`, `user_roles`, `role_permissions`
+- `tasks`, `task_assignees` (NOVO - M:N veza za višestruku dodjelu)
+- `login_events`, `audit_logs`
 
 ---
 

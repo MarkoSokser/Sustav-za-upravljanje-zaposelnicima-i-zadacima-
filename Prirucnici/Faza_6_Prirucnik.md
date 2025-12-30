@@ -82,13 +82,34 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 | GET | `/me/roles` | Moje uloge | `get_user_roles()` |
 | POST | `/check-permission/{code}` | Provjeri permisiju | `user_has_permission()` |
 | POST | `/validate-password` | Provjeri lozinku | `check_password_strength()` |
+| **POST** | **`/change-password`** | **Promijeni lozinku** | **direktni SQL** |
+
+#### Primjer promjene lozinke (NOVO)
+
+```bash
+curl -X POST "http://localhost:8000/api/auth/change-password" \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "current_password": "StaraLozinka123!",
+    "new_password": "NovaLozinka456!"
+  }'
+```
+
+**Response:**
+```json
+{
+  "message": "Lozinka uspješno promijenjena",
+  "success": true
+}
+```
 
 #### Primjer prijave
 
 ```bash
 curl -X POST "http://localhost:8000/api/auth/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin&password=Admin@123"
+  -d "username=admin&password=Admin123!"
 ```
 
 **Response:**
@@ -105,14 +126,18 @@ curl -X POST "http://localhost:8000/api/auth/login" \
 
 | Metoda | Endpoint | Opis | Permisija | PostgreSQL |
 |--------|----------|------|-----------|------------|
-| GET | `/` | Svi korisnici | USER_VIEW | `v_users_with_roles` |
-| GET | `/statistics` | Statistike korisnika | USER_VIEW | `v_user_statistics` |
+| GET | `/` | Svi korisnici | USER_READ_ALL | `v_users_with_roles` |
+| GET | `/statistics` | Statistike korisnika | USER_READ_ALL | `v_user_statistics` |
+| GET | `/team` | **NOVO** Moj tim | USER_READ_TEAM | `get_team_members()` |
 | GET | `/{id}` | Pojedini korisnik | * | `v_users_with_roles` |
 | GET | `/{id}/statistics` | Statistika zadataka | * | `get_task_statistics()` |
 | GET | `/{id}/team` | Članovi tima | * | `get_team_members()` |
+| GET | `/{id}/permissions` | **NOVO** Permisije korisnika | USER_READ_ALL | `user_permissions` |
 | POST | `/` | Kreiraj korisnika | USER_CREATE | `create_user()` |
 | PUT | `/{id}` | Ažuriraj korisnika | USER_UPDATE | `update_user()` |
+| PUT | `/{id}/permissions` | **NOVO** Dodaj permisiju | PERMISSION_MANAGE | `user_permissions` |
 | DELETE | `/{id}` | Deaktiviraj korisnika | USER_DELETE | `deactivate_user()` |
+| DELETE | `/{id}/permissions/{perm}` | **NOVO** Ukloni permisiju | PERMISSION_MANAGE | `user_permissions` |
 
 **\*** - Vlastiti podaci ili člana tima
 
@@ -139,17 +164,34 @@ curl -X POST "http://localhost:8000/api/users" \
 
 | Metoda | Endpoint | Opis | Permisija | PostgreSQL |
 |--------|----------|------|-----------|------------|
-| GET | `/` | Svi zadaci | TASK_VIEW | `v_tasks_details` |
+| GET | `/` | Svi zadaci | TASK_READ_ALL | `v_tasks_details` |
 | GET | `/my` | Moji zadaci | - | `get_user_tasks()` |
 | GET | `/my/statistics` | Moja statistika | - | `get_task_statistics()` |
 | GET | `/{id}` | Pojedini zadatak | * | `v_tasks_details` |
 | POST | `/` | Kreiraj zadatak | TASK_CREATE | `create_task()` |
-| PUT | `/{id}` | Ažuriraj zadatak | * | direktni SQL |
+| PUT | `/{id}` | Ažuriraj zadatak | TASK_UPDATE | direktni SQL |
 | PUT | `/{id}/status` | Promijeni status | * | `update_task_status()` |
-| PUT | `/{id}/assign` | Dodijeli zadatak | TASK_ASSIGN | `assign_task()` |
+| PUT | `/{id}/assign` | Dodijeli zadatak | TASK_ASSIGN | `task_assignees` |
 | DELETE | `/{id}` | Obriši zadatak | TASK_DELETE | direktni SQL |
 
-#### Primjer promjene statusa
+#### Workflow odobravanja zadataka (NOVO)
+
+**Pravila promjene statusa:**
+- **Employee** može: NEW → IN_PROGRESS → ON_HOLD → PENDING_APPROVAL
+- **Employee NE MOŽE** direktno staviti COMPLETED
+- **Manager/Admin** može odobriti: PENDING_APPROVAL → COMPLETED
+- **Manager/Admin** može vratiti: PENDING_APPROVAL → IN_PROGRESS
+
+#### Primjer predaje zadatka na odobrenje (Employee)
+
+```bash
+curl -X PUT "http://localhost:8000/api/tasks/1/status" \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "PENDING_APPROVAL"}'
+```
+
+#### Primjer odobravanja zadatka (Manager/Admin)
 
 ```bash
 curl -X PUT "http://localhost:8000/api/tasks/1/status" \
@@ -158,17 +200,20 @@ curl -X PUT "http://localhost:8000/api/tasks/1/status" \
   -d '{"status": "COMPLETED"}'
 ```
 
+**Napomena:** Manager može staviti COMPLETED samo ako je zadatak u statusu PENDING_APPROVAL.
+
 ---
 
 ### 4.4 Uloge (`/api/roles`)
 
 | Metoda | Endpoint | Opis | Permisija | PostgreSQL |
 |--------|----------|------|-----------|------------|
-| GET | `/` | Sve uloge | ROLE_VIEW | `v_roles_with_permissions` |
-| GET | `/permissions` | Sve permisije | ROLE_VIEW | `permissions` |
-| GET | `/{id}` | Pojedina uloga | ROLE_VIEW | `v_roles_with_permissions` |
-| GET | `/{id}/users` | Korisnici s ulogom | ROLE_VIEW | direktni SQL |
+| GET | `/` | Sve uloge | ROLE_READ | `v_roles_with_permissions` |
+| GET | `/permissions` | Sve permisije | ROLE_READ | `permissions` |
+| GET | `/{id}` | Pojedina uloga | ROLE_READ | `v_roles_with_permissions` |
+| GET | `/{id}/users` | Korisnici s ulogom | ROLE_READ | direktni SQL |
 | POST | `/` | Kreiraj ulogu | ROLE_CREATE | direktni SQL |
+| PUT | `/{id}` | Ažuriraj ulogu | ROLE_UPDATE | direktni SQL |
 | POST | `/assign` | Dodijeli ulogu | ROLE_ASSIGN | `assign_role()` |
 | DELETE | `/revoke` | Ukloni ulogu | ROLE_ASSIGN | `revoke_role()` |
 | DELETE | `/{id}` | Obriši ulogu | ROLE_DELETE | direktni SQL |

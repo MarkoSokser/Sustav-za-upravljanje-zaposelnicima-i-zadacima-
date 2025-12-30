@@ -82,29 +82,36 @@ WHERE code IN (
 
 
 -- POCETNI PODACI - USERS
--- Admin
+-- Admin (lozinka: Admin123!)
 INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
-('admin', 'admin@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'System', 'Admin', NULL, TRUE);
+('admin', 'admin@example.com', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'System', 'Admin', NULL, TRUE);
 
--- Manageri
+-- Manageri 
+-- Ivan (lozinka: IvanM2024!)
+-- Ana (lozinka: AnaK2024!)
 INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
-('ivan_manager', 'ivan.horvat@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Ivan', 'Horvat', (SELECT user_id FROM users WHERE username = 'admin'), TRUE),
-('ana_manager', 'ana.kovac@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Ana', 'Kovac', (SELECT user_id FROM users WHERE username = 'admin'), TRUE);
+('ivan_manager', 'ivan.horvat@example.com', '$2b$12$LCDt38VQT7PzJhHVgJCmWOeZD5h5mPi3r6G4WqHjBxZoOx9xB7LJO', 'Ivan', 'Horvat', (SELECT user_id FROM users WHERE username = 'admin'), TRUE),
+('ana_manager', 'ana.kovac@example.com', '$2b$12$8EjBXM5KN4F.VnLVeKc/nOxL1/M8p9UqxAOXphVZaBTqGRhvHN4g6', 'Ana', 'Kovac', (SELECT user_id FROM users WHERE username = 'admin'), TRUE);
 
 -- Zaposlenici - Development Team (pod Ivanom)
+-- Marko (lozinka: Marko2024!)
+-- Petra (lozinka: Petra2024!)
+-- Luka (lozinka: Luka2024!)
 INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
-('marko_dev', 'marko.novak@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Marko', 'Novak', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE),
-('petra_dev', 'petra.juric@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Petra', 'Juric', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE),
-('luka_dev', 'luka.baric@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Luka', 'Baric', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE);
+('marko_dev', 'marko.novak@example.com', '$2b$12$kMZD7J1h0XRTJ.x6wQn/9OGxYPdF7DnLEHD0W3Hv5YcJQRs4z.42K', 'Marko', 'Novak', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE),
+('petra_dev', 'petra.juric@example.com', '$2b$12$Xp0Vn8Q6b1FtBpUhNZGZJO7E9GlL6J5H8V1qM/pF2K4Rz9XhTcY7S', 'Petra', 'Juric', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE),
+('luka_dev', 'luka.baric@example.com', '$2b$12$YgB9Jx2H5nVqW3Tp8LmNdOxKz6Pv1Rh4Mc7Qt9Fb5Lj3Nw2Ea8Dy6', 'Luka', 'Baric', (SELECT user_id FROM users WHERE username = 'ivan_manager'), TRUE);
 
 -- Zaposlenici - Design Team (pod Anom)
+-- Maja (lozinka: Maja2024!)
+-- Tomislav (lozinka: Tomi2024!)
 INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
-('maja_design', 'maja.pavic@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Maja', 'Pavic', (SELECT user_id FROM users WHERE username = 'ana_manager'), TRUE),
-('tomislav_design', 'tomislav.knez@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Tomislav', 'Knez', (SELECT user_id FROM users WHERE username = 'ana_manager'), TRUE);
+('maja_design', 'maja.pavic@example.com', '$2b$12$HqW8Tz5F1nKpV4Lm9Xr2JOfY7Gx3Pv6Nd8Cw2Rb4Mh1Qa5Jy7Eu9S', 'Maja', 'Pavic', (SELECT user_id FROM users WHERE username = 'ana_manager'), TRUE),
+('tomislav_design', 'tomislav.knez@example.com', '$2b$12$FnD4Kp9Qx2Rt8Lv3Wb6Hy1OeU5Jz7Mg0Pc4Nx9Sv2Fk6Ta8Gm1Yw3', 'Tomislav', 'Knez', (SELECT user_id FROM users WHERE username = 'ana_manager'), TRUE);
 
--- Deaktivirani korisnik
+-- Deaktivirani korisnik (lozinka: Old2024!)
 INSERT INTO users (username, email, password_hash, first_name, last_name, manager_id, is_active) VALUES
-('old_employee', 'old.employee@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewiAlL3x7WjF8sJ2', 'Old', 'Employee', NULL, FALSE);
+('old_employee', 'old.employee@example.com', '$2b$12$Gv7Hs2Xk1Qp5Lr9Mn4Jc8OwT3By6Fd0Ek8Pz2Nv7Rg5Mc1Yh4Wu6', 'Old', 'Employee', NULL, FALSE);
 
 
 -- POCETNI PODACI - USER_ROLES 

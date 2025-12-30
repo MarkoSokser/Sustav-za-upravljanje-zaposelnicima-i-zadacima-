@@ -25,8 +25,8 @@
   gap: 15px;
 }
 
-/* Modal styles */
-.modal {
+/* Modal styles - renamed to avoid conflicts */
+.users-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -39,7 +39,7 @@
   z-index: 1000;
 }
 
-.modal-content {
+.users-modal-content {
   background: white;
   padding: 0;
   border-radius: 8px;

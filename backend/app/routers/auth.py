@@ -12,11 +12,11 @@ from ..database import get_db_dependency
 from ..auth import (
     authenticate_user, create_access_token, get_current_active_user,
     get_password_hash, log_login_attempt, get_user_permissions_list,
-    get_user_roles_list
+    get_user_roles_list, verify_password
 )
 from ..schemas import (
     Token, LoginRequest, UserResponse, UserWithRoles,
-    UserPermission, MessageResponse
+    UserPermission, MessageResponse, ChangePassword
 )
 from ..config import get_settings
 
@@ -88,6 +88,59 @@ async def logout(current_user: dict = Depends(get_current_active_user)):
     Ovaj endpoint postoji samo za API konzistentnost.
     """
     return MessageResponse(message=f"Korisnik {current_user['username']} uspjesno odjavljen")
+
+
+@router.post("/change-password", response_model=MessageResponse, summary="Promjena lozinke")
+async def change_password(
+    password_data: ChangePassword,
+    current_user: dict = Depends(get_current_active_user),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Promjena lozinke trenutno prijavljenog korisnika.
+    
+    Korisnik mora unijeti svoju trenutnu lozinku za verifikaciju,
+    te novu lozinku koja mora zadovoljiti sigurnosne kriterije.
+    """
+    with conn.cursor() as cur:
+        # Dohvati trenutni password hash
+        cur.execute(
+            "SELECT password_hash FROM users WHERE user_id = %s",
+            (current_user['user_id'],)
+        )
+        user = cur.fetchone()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Korisnik nije pronađen"
+            )
+        
+        # Verifikacija trenutne lozinke
+        if not verify_password(password_data.current_password, user['password_hash']):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Trenutna lozinka nije ispravna"
+            )
+        
+        # Provjera da nova lozinka nije ista kao stara
+        if verify_password(password_data.new_password, user['password_hash']):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Nova lozinka ne smije biti ista kao trenutna"
+            )
+        
+        # Hash nove lozinke i ažuriraj u bazi
+        new_password_hash = get_password_hash(password_data.new_password)
+        cur.execute(
+            "UPDATE users SET password_hash = %s, updated_at = CURRENT_TIMESTAMP WHERE user_id = %s",
+            (new_password_hash, current_user['user_id'])
+        )
+    
+    return MessageResponse(
+        message="Lozinka uspješno promijenjena",
+        success=True
+    )
 
 
 @router.get("/me", response_model=UserWithRoles, summary="Trenutni korisnik")

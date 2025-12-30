@@ -243,9 +243,33 @@ U sljedećim koracima projekt će se razvijati **fazu po fazu**, koristeći ovaj
 ✅ **Faza 5** - Funkcije, procedure i okidači - ZAVRŠENO  
 ✅ **Faza 6** - Backend aplikacija (FastAPI) - ZAVRŠENO  
 ✅ **Faza 7** - Frontend aplikacija (React) - **ZAVRŠENO**  
-⏳ **Faza 8** - Automatizacija i repozitorij - U TIJEKU  
-⏳ **Faza 9** - Dokumentacija (LaTeX) - SLJEDEĆE  
-⏳ **Faza 10** - Završna provjera - SLJEDEĆE  
+✅ **Faza 8** - Automatizacija i repozitorij - ZAVRŠENO  
+⏳ **Faza 9** - Dokumentacija (LaTeX) - U TIJEKU  
+⏳ **Faza 10** - Završna provjera - SLJEDEĆE
+
+---
+
+## Ključne značajke implementacije
+
+### 🔐 RBAC + Individualne permisije
+Sustav koristi hibridni model kontrole pristupa:
+- **Uloge (roles)** - grupne permisije (ADMIN, MANAGER, EMPLOYEE)
+- **Direktne permisije (user_permissions)** - individualno dodijeljene/oduzete permisije
+
+### ✅ Tijek odobravanja zadataka
+Zadaci prolaze kroz strukturirani tijek:
+```
+TODO → IN_PROGRESS → PENDING_APPROVAL → COMPLETED
+                  ↘ CANCELLED
+```
+- **Zaposlenik** može predložiti završetak (→ PENDING_APPROVAL)
+- **Manager/Admin** može odobriti završetak (→ COMPLETED)
+
+### 🔑 Promjena lozinke
+Svi korisnici mogu promijeniti svoju lozinku putem sigurnog modala.
+
+### 📊 10 PostgreSQL tablica
+users, roles, permissions, role_permissions, user_roles, user_permissions, tasks, task_assignees, audit_log, login_events  
 
 ---
 
@@ -257,9 +281,14 @@ Za svaku fazu postoji **detaljan priručnik** u `Prirucnici/` direktoriju:
 - `Faza_4_Prirucnik.md` - SQL implementacija baze
 - `Faza_5_Prirucnik.md` - Funkcije, procedure i triggeri
 - `Faza_6_Prirucnik.md` - Backend FastAPI
-- `Faza_7_Prirucnik.md` - **Frontend React (NOVO)**
+- `Faza_7_Prirucnik.md` - Frontend React
+
+### Dodatna dokumentacija
+- `images/ERA_diagram.md` - Ažurirani ERA dijagram s 10 tablica
+- `PRISTUPNI_PODACI.md` - Pristupni podaci za sve korisnike
+- `database/04_multi_assignees_migration.sql` - Migracija za višestruke assignee
 
 ---
 
 **Sljedeći korak:**  
-Faza 8 – Automatizacija, GitHub i README dokumentacija.
+Faza 9 – LaTeX dokumentacija za završni rad.

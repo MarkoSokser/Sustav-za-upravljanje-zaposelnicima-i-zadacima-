@@ -75,12 +75,22 @@ def authenticate_user(conn, username: str, password: str) -> Optional[dict]:
         user = cur.fetchone()
         
         if not user:
+            print(f"❌ User not found: {username}")
             return None
         
         if not user['is_active']:
+            print(f"❌ User inactive: {username}")
             return None
-            
-        if not verify_password(password, user['password_hash']):
+        
+        print(f"🔍 Password verification for {username}:")
+        print(f"   - Password length: {len(password)}")
+        print(f"   - Password: {password}")
+        print(f"   - Hash from DB: {user['password_hash'][:60]}...")
+        
+        verify_result = verify_password(password, user['password_hash'])
+        print(f"   - Verification result: {verify_result}")
+        
+        if not verify_result:
             return None
             
         return dict(user)
@@ -143,10 +153,38 @@ async def get_current_active_user(
 
 def check_permission(conn, user_id: int, permission_code: str) -> bool:
     """
-    Provjerava da li korisnik ima odredjenu permisiju
-    Koristi user_has_permission funkciju iz baze
+    Provjerava da li korisnik ima odredjenu permisiju.
+    Provjerava:
+    1. Direktne permisije korisnika (user_permissions tablica) - imaju prioritet
+    2. Permisije kroz uloge (role_permissions)
     """
     with conn.cursor() as cur:
+        # Prvo provjeri postoji li direktna permisija u user_permissions tablici
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.tables 
+                WHERE table_schema = 'employee_management' 
+                AND table_name = 'user_permissions'
+            ) as exists
+        """)
+        result = cur.fetchone()
+        table_exists = result['exists'] if result else False
+        
+        if table_exists:
+            # Provjeri direktnu permisiju
+            cur.execute("""
+                SELECT up.granted
+                FROM user_permissions up
+                JOIN permissions p ON up.permission_id = p.permission_id
+                WHERE up.user_id = %s AND p.code = %s
+            """, (user_id, permission_code))
+            direct_perm = cur.fetchone()
+            
+            if direct_perm is not None:
+                # Direktna permisija postoji - vrati njenu vrijednost
+                return direct_perm['granted']
+        
+        # Nema direktne permisije - provjeri kroz uloge
         cur.execute(
             "SELECT user_has_permission(%s, %s) as has_permission",
             (user_id, permission_code)
@@ -174,12 +212,48 @@ def require_permission(permission_code: str):
 
 
 def get_user_permissions_list(conn, user_id: int) -> list:
-    """Dohvaca sve permisije korisnika koristeci funkciju iz baze - vraca samo kodove"""
+    """
+    Dohvaca sve efektivne permisije korisnika - vraca samo kodove.
+    Kombinira permisije iz uloga i direktne permisije (user_permissions).
+    Direktne permisije imaju prioritet.
+    """
     with conn.cursor() as cur:
+        # Dohvati permisije iz uloga
         cur.execute("SELECT * FROM get_user_permissions(%s)", (user_id,))
-        permissions = cur.fetchall()
-        # Vrati samo permission_code stringove
-        return [perm['permission_code'] for perm in permissions]
+        role_permissions = cur.fetchall()
+        role_perm_codes = set(perm['permission_code'] for perm in role_permissions)
+        
+        # Provjeri postoji li tablica user_permissions
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.tables 
+                WHERE table_schema = 'employee_management' 
+                AND table_name = 'user_permissions'
+            ) as exists
+        """)
+        result = cur.fetchone()
+        table_exists = result['exists'] if result else False
+        
+        if table_exists:
+            # Dohvati direktne permisije
+            cur.execute("""
+                SELECT p.code, up.granted
+                FROM user_permissions up
+                JOIN permissions p ON up.permission_id = p.permission_id
+                WHERE up.user_id = %s
+            """, (user_id,))
+            direct_perms = cur.fetchall()
+            
+            # Primijeni direktne permisije
+            for dp in direct_perms:
+                if dp['granted']:
+                    # Dodaj permisiju ako je granted
+                    role_perm_codes.add(dp['code'])
+                else:
+                    # Ukloni permisiju ako je denied
+                    role_perm_codes.discard(dp['code'])
+        
+        return list(role_perm_codes)
 
 
 def get_user_roles_list(conn, user_id: int) -> list:
