@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usersAPI, rolesAPI } from '../services/api';
+import { formatErrorMessage } from '../utils/errorHandler';
 import './Users.css';
 
 const Users = () => {
@@ -130,22 +131,8 @@ const Users = () => {
         setSuccess('');
       }, 1500);
     } catch (error) {
-      // Parsiranje FastAPI validation errors
-      let errorMsg = 'Greška pri spremanju korisnika';
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (typeof detail === 'string') {
-          errorMsg = detail;
-        } else if (Array.isArray(detail)) {
-          // Validation errors - ekstrakcija poruka
-          errorMsg = detail.map(err => {
-            const field = err.loc?.join('.') || 'polje';
-            const msg = err.msg || err.message || 'nepoznata greška';
-            return `${field}: ${msg}`;
-          }).join('; ');
-        }
-      }
-      setError(errorMsg);
+      console.error('User save error:', error);
+      setError(formatErrorMessage(error, 'Greška pri spremanju korisnika.'));
     }
   };
 
@@ -160,8 +147,8 @@ const Users = () => {
       loadUsers();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Greška pri brisanju korisnika';
-      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+      console.error('User delete error:', error);
+      setError(formatErrorMessage(error, 'Greška pri brisanju korisnika.'));
     }
   };
 
@@ -179,8 +166,8 @@ const Users = () => {
       loadUsers();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Greška pri promjeni statusa korisnika';
-      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+      console.error('User status change error:', error);
+      setError(formatErrorMessage(error, 'Greška pri promjeni statusa korisnika.'));
     }
   };
 

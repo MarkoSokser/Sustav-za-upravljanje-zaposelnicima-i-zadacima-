@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { tasksAPI, usersAPI } from '../services/api';
 import TaskDetailsModal from '../components/TaskDetailsModal';
+import { formatErrorMessage } from '../utils/errorHandler';
 import './Tasks.css';
 
 const Tasks = () => {
@@ -155,21 +156,8 @@ const Tasks = () => {
         setSuccess('');
       }, 1500);
     } catch (error) {
-      // Parsiranje FastAPI validation errors
-      let errorMsg = 'Greška pri spremanju zadatka';
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (typeof detail === 'string') {
-          errorMsg = detail;
-        } else if (Array.isArray(detail)) {
-          errorMsg = detail.map(err => {
-            const field = err.loc?.join('.') || 'polje';
-            const msg = err.msg || err.message || 'nepoznata greška';
-            return `${field}: ${msg}`;
-          }).join('; ');
-        }
-      }
-      setError(errorMsg);
+      console.error('Task save error:', error);
+      setError(formatErrorMessage(error));
     }
   };
 
@@ -184,8 +172,8 @@ const Tasks = () => {
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Greška pri brisanju zadatka';
-      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+      console.error('Task delete error:', error);
+      setError(formatErrorMessage(error));
     }
   };
 
@@ -196,9 +184,8 @@ const Tasks = () => {
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      console.error('Error details:', error.response?.data);
-      const errorMsg = error.response?.data?.detail || 'Greška pri promjeni statusa';
-      setError(errorMsg);
+      console.error('Status change error:', error);
+      setError(formatErrorMessage(error));
       setTimeout(() => setError(''), 5000);
     }
   };

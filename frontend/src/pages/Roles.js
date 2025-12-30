@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { rolesAPI, usersAPI } from '../services/api';
+import { formatErrorMessage } from '../utils/errorHandler';
 import './Roles.css';
 
 const Roles = () => {
@@ -92,21 +93,8 @@ const Roles = () => {
         setSelectedRole('');
       }, 1500);
     } catch (error) {
-      // Parsiranje FastAPI validation errors
-      let errorMsg = 'Greška pri dodjeli uloge';
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (typeof detail === 'string') {
-          errorMsg = detail;
-        } else if (Array.isArray(detail)) {
-          errorMsg = detail.map(err => {
-            const field = err.loc?.join('.') || 'polje';
-            const msg = err.msg || err.message || 'nepoznata greška';
-            return `${field}: ${msg}`;
-          }).join('; ');
-        }
-      }
-      setError(errorMsg);
+      console.error('Role assign error:', error);
+      setError(formatErrorMessage(error, 'Greška pri dodjeli uloge.'));
     }
   };
 
@@ -121,8 +109,8 @@ const Roles = () => {
       loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Greška pri uklanjanju uloge';
-      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+      console.error('Role remove error:', error);
+      setError(formatErrorMessage(error, 'Greška pri uklanjanju uloge.'));
     }
   };
 
