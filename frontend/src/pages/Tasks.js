@@ -19,7 +19,8 @@ const Tasks = () => {
   const [success, setSuccess] = useState('');
   // Automatski postavi 'my' ako korisnik nema TASK_READ_ALL permisiju
   const canReadAll = hasPermission('TASK_READ_ALL');
-  const [viewMode, setViewMode] = useState(canReadAll ? 'all' : 'my'); // 'all' or 'my'
+  const canCreate = hasPermission('TASK_CREATE');
+  const [viewMode, setViewMode] = useState(canReadAll ? 'all' : 'my'); // 'all', 'my', or 'created'
   
   // Filteri
   const [statusFilter, setStatusFilter] = useState('');
@@ -43,16 +44,24 @@ const Tasks = () => {
     setError('');
     try {
       let response;
-      // Ako korisnik nema TASK_READ_ALL, koristi samo /tasks/my
-      if (viewMode === 'my' || !hasPermission('TASK_READ_ALL')) {
-        // Ucitaj samo moje zadatke
+      
+      if (viewMode === 'my') {
+        // Učitaj samo zadatke dodijeljene meni
         response = await tasksAPI.getMyTasks();
-      } else {
-        // Ucitaj sve zadatke s filterima
+      } else if (viewMode === 'created') {
+        // Učitaj zadatke koje sam ja kreirao (filtriraj na frontendu)
+        const allTasks = await tasksAPI.getAll({});
+        const myCreatedTasks = allTasks.data.filter(task => task.creator_id === user?.user_id);
+        response = { data: myCreatedTasks };
+      } else if (hasPermission('TASK_READ_ALL')) {
+        // Učitaj sve zadatke s filterima
         const params = {};
         if (statusFilter) params.status = statusFilter;
         if (priorityFilter) params.priority = priorityFilter;
         response = await tasksAPI.getAll(params);
+      } else {
+        // Fallback - učitaj samo moje zadatke
+        response = await tasksAPI.getMyTasks();
       }
       setTasks(response.data);
     } catch (error) {
@@ -214,7 +223,6 @@ const Tasks = () => {
     return <div className="loading">Učitavanje...</div>;
   }
 
-  const canCreate = hasPermission('TASK_CREATE');
   const canUpdate = hasPermission('TASK_UPDATE') || hasPermission('TASK_UPDATE_ANY');
   const canDelete = hasPermission('TASK_DELETE');
   const canReadSelf = hasPermission('TASK_READ_SELF');
@@ -223,9 +231,9 @@ const Tasks = () => {
     <div className="tasks-page">
       <div className="page-header">
         <h1>Zadaci</h1>
-        <div style={{display: 'flex', gap: '10px'}}>
-          {/* Gumbi za prebacivanje pogleda */}
-          {canReadAll && canReadSelf && (
+        <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+          {/* Gumbi za prebacivanje pogleda - prikazuje se ako ima TASK_READ_ALL */}
+          {canReadAll && (
             <>
               <button 
                 className={`btn ${viewMode === 'all' ? 'btn-primary' : 'btn-secondary'}`}
@@ -239,6 +247,14 @@ const Tasks = () => {
               >
                 Moji zadaci
               </button>
+              {canCreate && (
+                <button 
+                  className={`btn ${viewMode === 'created' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setViewMode('created')}
+                >
+                  Kreirani zadaci
+                </button>
+              )}
             </>
           )}
           {canCreate && (
