@@ -139,6 +139,12 @@ class RoleCreate(RoleBase):
     pass
 
 
+class RoleUpdate(BaseModel):
+    """Model za azuriranje uloge"""
+    name: Optional[str] = Field(None, min_length=1, max_length=50)
+    description: Optional[str] = None
+
+
 class RoleResponse(RoleBase):
     """Response model uloge"""
     role_id: int
@@ -186,6 +192,31 @@ class UserPermission(BaseModel):
     permission_code: str
     permission_name: str
     category: str
+
+
+class UserDirectPermission(BaseModel):
+    """Direktno dodijeljena permisija korisniku"""
+    permission_code: str
+    permission_name: str
+    category: str
+    granted: bool
+    assigned_at: Optional[datetime] = None
+    assigned_by_name: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class UserDirectPermissionAssign(BaseModel):
+    """Model za dodjelu direktne permisije korisniku"""
+    granted: bool = True
+    notes: Optional[str] = None
+
+
+class UserEffectivePermission(BaseModel):
+    """Efektivna permisija korisnika (iz uloge ili direktno)"""
+    permission_code: str
+    permission_name: str
+    category: str
+    source: str = 'ROLE'  # 'ROLE' ili 'DIRECT' - default ROLE za kompatibilnost
 
 
 # ============== TASK MODELS ==============

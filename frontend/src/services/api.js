@@ -157,12 +157,22 @@ export const rolesAPI = {
   getUserRoles: (userId) => 
     api.get(`/roles/user/${userId}`),
   
+  // Role Permissions (permisije uloge)
+  addPermissionToRole: (roleId, permissionCode) => 
+    api.post(`/roles/${roleId}/permissions/${permissionCode}`),
+  
+  removePermissionFromRole: (roleId, permissionCode) => 
+    api.delete(`/roles/${roleId}/permissions/${permissionCode}`),
+  
   // User Permissions (direktna dodjela)
   getUserDirectPermissions: (userId) => 
     api.get(`/roles/users/${userId}/permissions`),
   
-  assignPermissionToUser: (userId, permissionCode) => 
-    api.post(`/roles/users/${userId}/permissions/${permissionCode}`),
+  getUserEffectivePermissions: (userId) => 
+    api.get(`/roles/users/${userId}/effective-permissions`),
+  
+  assignPermissionToUser: (userId, permissionCode, data = { granted: true }) => 
+    api.post(`/roles/users/${userId}/permissions/${permissionCode}`, data),
   
   removePermissionFromUser: (userId, permissionCode) => 
     api.delete(`/roles/users/${userId}/permissions/${permissionCode}`),
