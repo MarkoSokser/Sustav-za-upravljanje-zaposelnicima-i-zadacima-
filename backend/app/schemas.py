@@ -92,6 +92,23 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class ChangePassword(BaseModel):
+    """Model za promjenu lozinke"""
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError('Nova lozinka mora sadrzavati barem jedno veliko slovo')
+        if not any(c.islower() for c in v):
+            raise ValueError('Nova lozinka mora sadrzavati barem jedno malo slovo')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Nova lozinka mora sadrzavati barem jedan broj')
+        return v
+
+
 class UserResponse(UserBase):
     """Response model korisnika"""
     user_id: int
