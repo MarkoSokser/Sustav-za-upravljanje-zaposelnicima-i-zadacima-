@@ -5,8 +5,9 @@ import { formatErrorMessage } from '../utils/errorHandler';
 import './Users.css';
 
 const Users = () => {
-  const { hasPermission, user: currentUser } = useAuth();
+  const { hasPermission, user: currentUser, isManager } = useAuth();
   const [users, setUsers] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -14,6 +15,7 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [viewMode, setViewMode] = useState('all'); // 'all', 'team', 'self'
 
   const [formData, setFormData] = useState({
     username: '',
@@ -28,7 +30,19 @@ const Users = () => {
   useEffect(() => {
     loadUsers();
     loadRoles();
-  }, []);
+    if (isManager() && currentUser) {
+      loadTeam();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadTeam = async () => {
+    try {
+      const response = await usersAPI.getTeam(currentUser.user_id);
+      setTeamMembers(response.data);
+    } catch (error) {
+      console.error('Greška pri učitavanju tima:', error);
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -177,6 +191,7 @@ const Users = () => {
 
   const canCreate = hasPermission('USER_CREATE');
   const canUpdate = hasPermission('USER_UPDATE') || hasPermission('USER_UPDATE_ALL');
+  const canUpdateSelf = hasPermission('USER_UPDATE_SELF');
   const canDelete = hasPermission('USER_DELETE');
   const canDeactivate = hasPermission('USER_DEACTIVATE');
 
@@ -184,11 +199,38 @@ const Users = () => {
     <div className="users-page">
       <div className="page-header">
         <h1>Korisnici</h1>
-        {canCreate && (
-          <button className="btn btn-primary" onClick={handleCreate}>
-            + Novi korisnik
-          </button>
-        )}
+        <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+          {/* Gumbi za prebacivanje pogleda */}
+          {hasPermission('USER_READ_ALL') && (
+            <button 
+              className={`btn ${viewMode === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setViewMode('all')}
+            >
+              Svi korisnici
+            </button>
+          )}
+          {isManager() && teamMembers.length > 0 && (
+            <button 
+              className={`btn ${viewMode === 'team' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setViewMode('team')}
+            >
+              Moj tim ({teamMembers.length})
+            </button>
+          )}
+          {!hasPermission('USER_READ_ALL') && (
+            <button 
+              className={`btn ${viewMode === 'self' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setViewMode('self')}
+            >
+              Moj profil
+            </button>
+          )}
+          {canCreate && (
+            <button className="btn btn-primary" onClick={handleCreate}>
+              + Novi korisnik
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -201,25 +243,25 @@ const Users = () => {
               <th>Korisničko ime</th>
               <th>Ime i prezime</th>
               <th>Email</th>
-              <th>Odjel</th>
+              {viewMode !== 'team' && <th>Odjel</th>}
               <th>Uloge</th>
               <th>Status</th>
               <th>Akcije</th>
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
+            {(viewMode === 'team' ? teamMembers : users).map(user => (
               <tr key={user.user_id}>
                 <td>{user.username}</td>
-                <td>{user.first_name} {user.last_name}</td>
+                <td>{user.first_name || user.full_name?.split(' ')[0]} {user.last_name || user.full_name?.split(' ').slice(1).join(' ')}</td>
                 <td>{user.email}</td>
-                <td>{user.department || '-'}</td>
+                {viewMode !== 'team' && <td>{user.department || '-'}</td>}
                 <td>
                   {user.roles?.map(role => (
                     <span key={role} className="badge badge-info" style={{marginRight: '5px'}}>
                       {role}
                     </span>
-                  ))}
+                  )) || '-'}
                 </td>
                 <td>
                   <span className={`badge ${user.is_active ? 'badge-success' : 'badge-danger'}`}>
@@ -228,7 +270,8 @@ const Users = () => {
                 </td>
                 <td>
                   <div className="action-buttons">
-                    {canUpdate && (
+                    {/* Prikaži Uredi ako ima USER_UPDATE ili ako je vlastiti profil */}
+                    {(canUpdate || (canUpdateSelf && user.user_id === currentUser?.user_id)) && (
                       <button 
                         className="btn btn-primary btn-sm" 
                         onClick={() => handleEdit(user)}
@@ -236,7 +279,7 @@ const Users = () => {
                         Uredi
                       </button>
                     )}
-                    {canDeactivate && (
+                    {canDeactivate && user.user_id !== currentUser?.user_id && (
                       <button 
                         className={`btn ${user.is_active ? 'btn-warning' : 'btn-success'} btn-sm`}
                         onClick={() => handleToggleActive(user.user_id, user.is_active)}
@@ -244,7 +287,7 @@ const Users = () => {
                         {user.is_active ? 'Deaktiviraj' : 'Aktiviraj'}
                       </button>
                     )}
-                    {canDelete && (
+                    {canDelete && user.user_id !== currentUser?.user_id && (
                       <button 
                         className="btn btn-danger btn-sm"
                         onClick={() => handleDelete(user.user_id)}

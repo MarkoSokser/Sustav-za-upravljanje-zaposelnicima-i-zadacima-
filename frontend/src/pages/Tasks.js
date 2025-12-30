@@ -224,6 +224,7 @@ const Tasks = () => {
   }
 
   const canUpdate = hasPermission('TASK_UPDATE') || hasPermission('TASK_UPDATE_ANY');
+  const canUpdateSelfStatus = hasPermission('TASK_UPDATE_SELF_STATUS');
   const canDelete = hasPermission('TASK_DELETE');
   const canReadSelf = hasPermission('TASK_READ_SELF');
 
@@ -323,7 +324,9 @@ const Tasks = () => {
                   )}
                 </td>
                 <td>
-                  {canUpdate && task.status !== 'COMPLETED' && task.status !== 'CANCELLED' ? (
+                  {/* Prikaži dropdown za promjenu statusa ako korisnik ima prava */}
+                  {(canUpdate || (canUpdateSelfStatus && task.assignee_ids?.includes(user?.user_id))) && 
+                   task.status !== 'COMPLETED' && task.status !== 'CANCELLED' ? (
                     <select 
                       value={task.status}
                       onChange={(e) => handleStatusChange(task.task_id, e.target.value)}

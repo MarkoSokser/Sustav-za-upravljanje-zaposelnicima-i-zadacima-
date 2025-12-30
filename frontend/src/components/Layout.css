@@ -108,101 +108,169 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .modal {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  max-width: 450px;
-  width: 90%;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  max-width: 420px;
+  width: 100%;
+  animation: modalSlideIn 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .password-modal .modal-header {
-  padding: 20px;
-  border-bottom: 1px solid #eee;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
 }
 
 .password-modal .modal-header h2 {
   margin: 0;
-  font-size: 20px;
-  color: #333;
+  font-size: 16px;
+  color: white;
+  font-weight: 600;
 }
 
 .password-modal .close-btn {
-  background: none;
+  background: rgba(255,255,255,0.2);
   border: none;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
-  color: #999;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
 }
 
 .password-modal .close-btn:hover {
-  color: #333;
+  background: rgba(255,255,255,0.3);
 }
 
 .password-modal .modal-body {
-  padding: 20px;
+  padding: 28px 24px;
 }
 
 .password-modal .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .password-modal .form-group label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: #444;
+  font-size: 14px;
 }
 
 .password-modal .form-group input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 15px;
   box-sizing: border-box;
+  transition: all 0.2s;
 }
 
 .password-modal .form-group input:focus {
   outline: none;
-  border-color: #2196F3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
 }
 
 .password-modal .hint {
   display: block;
-  margin-top: 5px;
+  margin-top: 6px;
   font-size: 12px;
   color: #888;
 }
 
 .password-modal .modal-footer {
-  padding: 15px 20px;
-  border-top: 1px solid #eee;
+  padding: 16px 24px 20px;
+  background: #f8f9fa;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
 }
 
-.password-modal .error-message {
-  background: #ffebee;
-  color: #c62828;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 15px;
+.password-modal .modal-footer .btn-secondary {
+  background: white;
+  color: #666;
+  border: 1px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
   font-size: 14px;
 }
 
-.password-modal .success-message {
-  background: #e8f5e9;
-  color: #2e7d32;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 15px;
+.password-modal .modal-footer .btn-secondary:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.password-modal .modal-footer .btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
   font-size: 14px;
+}
+
+.password-modal .modal-footer .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.password-modal .modal-footer .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.password-modal .error-message {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+  color: white;
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.password-modal .success-message {
+  background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+  color: white;
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 500;
 }

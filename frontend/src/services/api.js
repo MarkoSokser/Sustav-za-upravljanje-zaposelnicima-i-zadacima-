@@ -88,6 +88,9 @@ export const usersAPI = {
   getStatistics: (userId) => 
     api.get(`/users/${userId}/statistics`),
   
+  getTeam: (userId) => 
+    api.get(`/users/${userId}/team`),
+  
   getSubordinates: (managerId) => 
     api.get(`/users/${managerId}/subordinates`),
   
