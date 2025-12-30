@@ -9,10 +9,23 @@ const TaskDetailsModal = ({ task, onClose }) => {
       'NEW': 'badge-info',
       'IN_PROGRESS': 'badge-warning',
       'ON_HOLD': 'badge-warning',
+      'PENDING_APPROVAL': 'badge-pending',
       'COMPLETED': 'badge-success',
       'CANCELLED': 'badge-danger'
     };
     return statusMap[status] || 'badge-info';
+  };
+
+  const getStatusLabel = (status) => {
+    const labelMap = {
+      'NEW': 'Novo',
+      'IN_PROGRESS': 'U tijeku',
+      'ON_HOLD': 'Na čekanju',
+      'PENDING_APPROVAL': '⏳ Čeka odobrenje',
+      'COMPLETED': 'Završeno',
+      'CANCELLED': 'Otkazano'
+    };
+    return labelMap[status] || status;
   };
 
   const getPriorityBadge = (priority) => {
@@ -49,7 +62,7 @@ const TaskDetailsModal = ({ task, onClose }) => {
               <div className="detail-item">
                 <label>Status:</label>
                 <span className={`badge ${getStatusBadge(task.status)}`}>
-                  {task.status}
+                  {getStatusLabel(task.status)}
                 </span>
               </div>
               <div className="detail-item">

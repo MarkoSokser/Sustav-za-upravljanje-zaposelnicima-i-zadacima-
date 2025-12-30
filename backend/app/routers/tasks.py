@@ -117,6 +117,13 @@ async def get_my_tasks(
     
     result = []
     for task in tasks:
+        # Izračunaj is_overdue - None vrijednost treba pretvoriti u False
+        is_overdue_val = task.get('is_overdue')
+        if is_overdue_val is None:
+            # Izračunaj ručno ako nije u rezultatu
+            due_status = task.get('due_status')
+            is_overdue_val = due_status == 'OVERDUE' if due_status else False
+        
         result.append(TaskDetails(
             task_id=task['task_id'],
             title=task['title'],
@@ -138,7 +145,7 @@ async def get_my_tasks(
             assignee_ids=task.get('assignee_ids'),
             assignee_names=task.get('assignee_names'),
             due_status=task.get('due_status'),
-            is_overdue=task.get('is_overdue', False)
+            is_overdue=is_overdue_val
         ))
     
     return result
@@ -319,12 +326,55 @@ async def update_task_status(
     - Korisnik mora biti assignee, kreator, ili imati TASK_UPDATE_ANY permisiju
     - Zavrseni zadaci se ne mogu ponovo otvoriti
     - Otkazani zadaci se ne mogu mijenjati
+    - NOVO: Employee može staviti samo PENDING_APPROVAL (ne COMPLETED direktno)
+    - NOVO: Samo Manager/Admin mogu potvrditi COMPLETED
     """
+    new_status = status_data.status.value
+    
+    # Dohvati trenutni status zadatka i provjeri ulogu korisnika
+    with conn.cursor() as cur:
+        # Dohvati trenutni status
+        cur.execute("SELECT status FROM tasks WHERE task_id = %s", (task_id,))
+        task_result = cur.fetchone()
+        if not task_result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Zadatak nije pronađen"
+            )
+        current_status = task_result['status']
+        
+        # Provjeri je li korisnik manager ili admin
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1 FROM user_roles ur
+                JOIN roles r ON ur.role_id = r.role_id
+                WHERE ur.user_id = %s AND r.name IN ('ADMIN', 'MANAGER')
+            ) AS is_manager_or_admin
+        """, (current_user['user_id'],))
+        result = cur.fetchone()
+        is_manager_or_admin = result['is_manager_or_admin'] if result else False
+    
+    # Employee ne može direktno staviti COMPLETED
+    if new_status == 'COMPLETED' and not is_manager_or_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Samo manager ili admin mogu završiti zadatak. Koristite status 'Čeka odobrenje' (PENDING_APPROVAL)."
+        )
+    
+    # Manager/Admin mogu staviti COMPLETED samo ako je zadatak u PENDING_APPROVAL
+    # (osim ako je CANCELLED - to može uvijek)
+    if new_status == 'COMPLETED' and is_manager_or_admin:
+        if current_status != 'PENDING_APPROVAL':
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Zadatak mora biti u statusu 'Čeka odobrenje' da bi se mogao završiti. Trenutni status: {current_status}"
+            )
+    
     try:
         with conn.cursor() as cur:
             cur.execute("""
                 CALL update_task_status(%s, %s, %s)
-            """, (task_id, status_data.status.value, current_user['user_id']))
+            """, (task_id, new_status, current_user['user_id']))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -332,7 +382,7 @@ async def update_task_status(
         )
     
     return MessageResponse(
-        message=f"Status zadatka ID {task_id} promijenjen u {status_data.status.value}",
+        message=f"Status zadatka ID {task_id} promijenjen u {new_status}",
         success=True
     )
 

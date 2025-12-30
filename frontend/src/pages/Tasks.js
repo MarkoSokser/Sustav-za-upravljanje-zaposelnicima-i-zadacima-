@@ -204,10 +204,60 @@ const Tasks = () => {
       'NEW': 'badge-info',
       'IN_PROGRESS': 'badge-warning',
       'ON_HOLD': 'badge-warning',
+      'PENDING_APPROVAL': 'badge-pending',
       'COMPLETED': 'badge-success',
       'CANCELLED': 'badge-danger'
     };
     return statusMap[status] || 'badge-info';
+  };
+
+  const getStatusLabel = (status) => {
+    const labelMap = {
+      'NEW': 'Novo',
+      'IN_PROGRESS': 'U tijeku',
+      'ON_HOLD': 'Na čekanju',
+      'PENDING_APPROVAL': '⏳ Čeka odobrenje',
+      'COMPLETED': 'Završeno',
+      'CANCELLED': 'Otkazano'
+    };
+    return labelMap[status] || status;
+  };
+
+  // Provjeri je li korisnik manager ili admin
+  const isManagerOrAdmin = hasPermission('TASK_UPDATE_ANY') || 
+                           user?.roles?.some(r => r.name === 'ADMIN' || r.name === 'MANAGER');
+
+  // Opcije statusa ovisno o ulozi i trenutnom statusu zadatka
+  const getStatusOptions = (currentStatus) => {
+    // Manager/Admin mogu:
+    // - Ako je zadatak u PENDING_APPROVAL -> mogu staviti COMPLETED (odobriti) ili vratiti
+    // - Inače -> sve opcije OSIM COMPLETED (moraju čekati da employee preda na odobrenje)
+    if (isManagerOrAdmin) {
+      if (currentStatus === 'PENDING_APPROVAL') {
+        return [
+          { value: 'PENDING_APPROVAL', label: '⏳ Čeka odobrenje' },
+          { value: 'IN_PROGRESS', label: '↩️ Vrati na doradu' },
+          { value: 'COMPLETED', label: '✅ Odobri završetak' },
+          { value: 'CANCELLED', label: 'Otkazano' }
+        ];
+      }
+      // Za ostale statuse - manager NE MOŽE staviti COMPLETED direktno
+      return [
+        { value: 'NEW', label: 'Novo' },
+        { value: 'IN_PROGRESS', label: 'U tijeku' },
+        { value: 'ON_HOLD', label: 'Na čekanju' },
+        { value: 'PENDING_APPROVAL', label: '⏳ Predaj na odobrenje' },
+        { value: 'CANCELLED', label: 'Otkazano' }
+        // COMPLETED je NAMJERNO IZOSTAVLJEN - mora proći kroz PENDING_APPROVAL
+      ];
+    }
+    // Employee vidi ograničene opcije - NE može direktno COMPLETED
+    return [
+      { value: 'NEW', label: 'Novo' },
+      { value: 'IN_PROGRESS', label: 'U tijeku' },
+      { value: 'ON_HOLD', label: 'Na čekanju' },
+      { value: 'PENDING_APPROVAL', label: '📤 Predaj na odobrenje' }
+    ];
   };
 
   const getPriorityBadge = (priority) => {
@@ -278,6 +328,7 @@ const Tasks = () => {
             <option value="NEW">Novo</option>
             <option value="IN_PROGRESS">U tijeku</option>
             <option value="ON_HOLD">Na čekanju</option>
+            <option value="PENDING_APPROVAL">⏳ Čeka odobrenje</option>
             <option value="COMPLETED">Završeno</option>
             <option value="CANCELLED">Otkazano</option>
           </select>
@@ -332,20 +383,13 @@ const Tasks = () => {
                       onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
                       className="status-select"
                     >
-                      <option value="NEW">Novo</option>
-                      <option value="IN_PROGRESS">U tijeku</option>
-                      <option value="ON_HOLD">Na čekanju</option>
-                      <option value="COMPLETED">Završeno</option>
-                      <option value="CANCELLED">Otkazano</option>
+                      {getStatusOptions(task.status).map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   ) : (
                     <span className={`badge ${getStatusBadge(task.status)}`}>
-                      {task.status === 'NEW' ? 'Novo' :
-                       task.status === 'IN_PROGRESS' ? 'U tijeku' :
-                       task.status === 'ON_HOLD' ? 'Na čekanju' :
-                       task.status === 'COMPLETED' ? 'Završeno' :
-                       task.status === 'CANCELLED' ? 'Otkazano' :
-                       task.status}
+                      {getStatusLabel(task.status)}
                     </span>
                   )}
                 </td>

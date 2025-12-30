@@ -230,3 +230,16 @@
     font-size: 20px;
   }
 }
+
+/* Badge za status "Čeka odobrenje" */
+.badge-pending {
+  background-color: #ff9800;
+  color: #000;
+  animation: pulse-pending 2s infinite;
+}
+
+@keyframes pulse-pending {
+  0% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 5px rgba(255, 152, 0, 0); }
+  100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
+}

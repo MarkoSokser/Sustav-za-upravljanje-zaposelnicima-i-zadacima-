@@ -60,3 +60,21 @@
   flex-wrap: wrap;
 }
 
+/* Badge za status "Čeka odobrenje" */
+.badge-pending {
+  background-color: #ff9800;
+  color: #000;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Oznaka za zadatke koji čekaju odobrenje managera */
+.pending-approval-row {
+  background-color: #fff3e0 !important;
+}
+

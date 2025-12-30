@@ -305,8 +305,8 @@ const Users = () => {
 
       {/* Modal za kreiranje/uređivanje */}
       {showModal && (
-        <div className="modal">
-          <div className="modal-content">
+        <div className="users-modal-overlay">
+          <div className="users-modal-content">
             <div className="modal-header">
               <h2>{isEditing ? 'Uredi korisnika' : 'Novi korisnik'}</h2>
               <button className="close" onClick={() => setShowModal(false)}>&times;</button>
