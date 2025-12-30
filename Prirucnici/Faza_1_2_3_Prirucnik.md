@@ -55,7 +55,7 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 
 ### Upravljanje zadacima
 21. Manager može kreirati nove zadatke.
-22. Manager može dodijeliti zadatak zaposleniku iz svog tima.
+22. Manager može dodijeliti zadatak jednom ili više zaposlenika iz svog tima.
 23. Manager može uređivati zadatke koje je kreirao.
 24. Manager može pregledati sve zadatke unutar svog tima.
 25. Manager može brisati zadatke koje je kreirao.
@@ -64,6 +64,7 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 28. Administrator može pregledati sve zadatke u sustavu.
 29. Administrator može uređivati sve zadatke u sustavu.
 30. Administrator može brisati sve zadatke u sustavu.
+31. **Zadatak može biti dodijeljen većem broju korisnika istovremeno (timski rad).**
 
 ### Meta-podaci i audit
 31. Sustav mora bilježiti sve prijave korisnika (vrijeme, IP adresa, uspješnost).
@@ -203,13 +204,14 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 1. **Hijerarhija timova:** Svaki zaposlenik može imati nadređenog managera (manager_id).
 2. **Pristup podacima:** Zaposlenik može pristupiti i uređivati samo vlastite podatke i status vlastitih zadataka.
 3. **Upravljanje timom:** Manager može upravljati samo zaposlenicima koji su mu izravno podređeni.
-4. **Dodjela zadataka:** Manager može dodijeliti zadatak samo zaposlenicima iz svog tima.
-5. **Administratorske ovlasti:** Administrator ima puni pristup svim dijelovima sustava.
-6. **Audit evidencija:** Sve promjene uloga i prava pristupa bilježe se u audit log.
-7. **Prijave:** Svaka prijava korisnika (uspješna ili neuspješna) evidentira se u sustavu.
-8. **Deaktivacija:** Deaktivirani korisnici ne mogu se prijaviti u sustav.
-9. **Integritet uloga:** Uloga se ne može obrisati ako je dodijeljena nekom korisniku.
-10. **Status zadatka:** Samo dodijeljeni korisnik ili administrator može promijeniti status zadatka.
+4. **Dodjela zadataka:** Manager može dodijeliti zadatak jednom ili više zaposlenika iz svog tima.
+5. **Višestruka dodjela:** Isti zadatak može biti dodijeljen većem broju korisnika za timski rad.
+6. **Administratorske ovlasti:** Administrator ima puni pristup svim dijelovima sustava.
+7. **Audit evidencija:** Sve promjene uloga i prava pristupa bilježe se u audit log.
+8. **Prijave:** Svaka prijava korisnika (uspješna ili neuspješna) evidentira se u sustavu.
+9. **Deaktivacija:** Deaktivirani korisnici ne mogu se prijaviti u sustav.
+10. **Integritet uloga:** Uloga se ne može obrisati ako je dodijeljena nekom korisniku.
+11. **Status zadatka:** Samo dodijeljeni korisnik/korisnici ili administrator može promijeniti status zadatka.
 
 ---
 
@@ -419,7 +421,8 @@ Sustav se sastoji od sljedećih ključnih entiteta:
 | **Permission** | Glavni | Pojedinačno pravo pristupa |
 | **UserRole** | Povezni | Veza između korisnika i uloga (M:N) |
 | **RolePermission** | Povezni | Veza između uloga i prava (M:N) |
-| **Task** | Glavni | Zadatak dodijeljen zaposleniku |
+| **Task** | Glavni | Zadatak dodijeljen zaposlenicima |
+| **TaskAssignee** | Povezni | Veza između zadataka i korisnika (M:N) - višestruka dodjela |
 | **LoginEvent** | Audit | Evidencija prijava korisnika |
 | **AuditLog** | Audit | Zapis promjena nad osjetljivim podacima |
 
@@ -551,7 +554,30 @@ CREATE TYPE task_priority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT');
 
 **Napomene:**
 - `completed_at` se automatski popunjava kada status postane COMPLETED
-- `assigned_to` može biti NULL (neraspoređeni zadatak)
+- `assigned_to` čuva se za backward compatibility (prvi dodijeljeni korisnik)
+- Za višestruku dodjelu koristi se tablica `task_assignees`
+
+---
+
+### 3.4.9 TaskAssignee (NOVO)
+
+Povezni entitet koji omogućuje dodjelu jednog zadatka više korisnika.
+
+| Atribut | Tip | Ograničenja | Opis |
+|---------|-----|-------------|------|
+| `task_assignee_id` | SERIAL | PK | Jedinstveni identifikator |
+| `task_id` | INTEGER | FK → Task, NOT NULL | Referenca na zadatak |
+| `user_id` | INTEGER | FK → User, NOT NULL | Referenca na korisnika |
+| `assigned_at` | TIMESTAMP | NOT NULL, DEFAULT NOW() | Datum dodjele |
+| `assigned_by` | INTEGER | FK → User, NULL | Korisnik koji je dodijelio zadatak |
+
+**Ograničenja:**
+- UNIQUE (task_id, user_id) – isti korisnik ne može biti dodijeljen istom zadatku više puta
+- ON DELETE CASCADE za task_id i user_id
+
+**Napomene:**
+- Omogućuje rad više zaposlenika na istom zadatku
+- Koristi se kada zadatak zahtijeva timski rad
 
 ---
 
@@ -691,10 +717,23 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 │                              │ priority      ENUM     │                         │
 │                              │ due_date      DT       │                         │
 │                              │ created_by    INT  FK  │                         │
-│                              │ assigned_to   INT  FK  │                         │
+│                              │ assigned_to   INT  FK  │◄─── backward compat.    │
 │                              │ created_at    TS       │                         │
 │                              │ updated_at    TS       │                         │
 │                              │ completed_at  TS       │                         │
+│                              └──────────┬─────────────┘                         │
+│                                         │                                       │
+│                                         │ 1                                     │
+│                                         │                                       │
+│                              ┌──────────┴─────────────┐                         │
+│                              │    TaskAssignee        │  (NOVO - M:N veza)      │
+│                              │────────────────────────│                         │
+│                              │ task_assignee_id       │                         │
+│                              │              SER  PK   │                         │
+│                              │ task_id      INT  FK   │                         │
+│                              │ user_id      INT  FK   │──────► User             │
+│                              │ assigned_at  TS        │                         │
+│                              │ assigned_by  INT  FK   │                         │
 │                              └────────────────────────┘                         │
 │                                                                                  │
 │  Legenda tipova:                                                                │
@@ -715,6 +754,7 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 |-------|-----|------|
 | User ↔ Role | M:N | Korisnik može imati više uloga; uloga može pripadati više korisnika (preko UserRole) |
 | Role ↔ Permission | M:N | Uloga može imati više prava; pravo može pripadati više uloga (preko RolePermission) |
+| Task ↔ User | M:N | Zadatak može biti dodijeljen više korisnika; korisnik može raditi na više zadataka (preko TaskAssignee) |
 
 **Direktni odnosi:**
 
@@ -722,7 +762,9 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 |-----------|------|-----------|--------------|------|
 | **User** | manager_id | **User** | 1:N | Jedan manager (User) može imati više podređenih zaposlenika (User) |
 | **User** | created_by | **Task** | 1:N | Jedan korisnik može kreirati više zadataka |
-| **User** | assigned_to | **Task** | 1:N | Jednom korisniku može biti dodijeljeno više zadataka |
+| **User** | assigned_to | **Task** | 1:N | Jednom korisniku može biti dodijeljeno više zadataka (backward compat.) |
+| **Task** | task_id | **TaskAssignee** | 1:N | Jedan zadatak može imati više dodijeljenih korisnika |
+| **User** | user_id | **TaskAssignee** | 1:N | Jedan korisnik može biti dodijeljen na više zadataka |
 | **User** | user_id | **LoginEvent** | 1:N | Jedan korisnik može imati više evidencija prijava |
 | **User** | changed_by | **AuditLog** | 1:N | Jedan korisnik može biti odgovoran za više audit zapisa |
 | **User** | assigned_by | **UserRole** | 1:N | Jedan korisnik može dodijeliti uloge više puta |
@@ -749,6 +791,9 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 | RolePermission | permission_id | Permission(permission_id) | CASCADE |
 | Task | created_by | User(user_id) | RESTRICT |
 | Task | assigned_to | User(user_id) | SET NULL |
+| **TaskAssignee** | **task_id** | **Task(task_id)** | **CASCADE** |
+| **TaskAssignee** | **user_id** | **User(user_id)** | **CASCADE** |
+| **TaskAssignee** | **assigned_by** | **User(user_id)** | **SET NULL** |
 | LoginEvent | user_id | User(user_id) | SET NULL |
 | AuditLog | changed_by | User(user_id) | SET NULL |
 
@@ -758,6 +803,7 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 - Permission: code
 - UserRole: (user_id, role_id)
 - RolePermission: (role_id, permission_id)
+- **TaskAssignee: (task_id, user_id)**
 
 ### CHECK ograničenja
 - User.email mora sadržavati '@'
@@ -776,6 +822,8 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 | Task | idx_task_status | Filtriranje po statusu |
 | Task | idx_task_assigned | Zadaci dodijeljeni korisniku |
 | Task | idx_task_created_by | Zadaci koje je korisnik kreirao |
+| **TaskAssignee** | **idx_task_assignees_task** | **Dohvat svih korisnika na zadatku** |
+| **TaskAssignee** | **idx_task_assignees_user** | **Dohvat svih zadataka korisnika** |
 | LoginEvent | idx_login_user | Povijest prijava korisnika |
 | LoginEvent | idx_login_time | Sortiranje po vremenu |
 | AuditLog | idx_audit_entity | Pretraga po entitetu |

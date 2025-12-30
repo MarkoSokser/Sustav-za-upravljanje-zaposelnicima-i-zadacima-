@@ -4,7 +4,7 @@ import { usersAPI, rolesAPI } from '../services/api';
 import './Users.css';
 
 const Users = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +32,19 @@ const Users = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const response = await usersAPI.getAll();
-      setUsers(response.data);
+      // Ako korisnik nema USER_READ_ALL, prikazi samo vlastite podatke
+      if (!hasPermission('USER_READ_ALL')) {
+        if (currentUser) {
+          // Dohvati vlastite podatke preko /users/{id}
+          const response = await usersAPI.getById(currentUser.user_id);
+          setUsers([response.data]);
+        } else {
+          setUsers([]);
+        }
+      } else {
+        const response = await usersAPI.getAll();
+        setUsers(response.data);
+      }
     } catch (error) {
       if (error.response?.status === 403) {
         setError('Nemate pristup ovoj stranici. Potrebne su dodatne permisije.');
@@ -47,6 +58,10 @@ const Users = () => {
   };
 
   const loadRoles = async () => {
+    // Samo ucitaj uloge ako ima permisiju
+    if (!hasPermission('ROLE_READ')) {
+      return;
+    }
     try {
       const response = await rolesAPI.getAll();
       setRoles(response.data);

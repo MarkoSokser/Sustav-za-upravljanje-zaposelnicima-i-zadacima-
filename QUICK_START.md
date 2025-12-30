@@ -20,6 +20,7 @@ CREATE DATABASE interni_sustav;
 \i database/01_schema.sql
 \i database/02_seed_data.sql
 \i database/03_functions_procedures.sql
+\i database/04_multi_assignees_migration.sql   # Višestruka dodjela zadataka
 
 # Provjeri instalaciju
 SELECT * FROM v_users_with_roles;

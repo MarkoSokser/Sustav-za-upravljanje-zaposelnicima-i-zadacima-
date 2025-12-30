@@ -4,7 +4,7 @@ import { rolesAPI, usersAPI } from '../services/api';
 import './Roles.css';
 
 const Roles = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user: currentUser } = useAuth();
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [users, setUsers] = useState([]);
@@ -23,15 +23,42 @@ const Roles = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [rolesRes, permsRes, usersRes] = await Promise.all([
-        rolesAPI.getAll(),
-        rolesAPI.getPermissions(),
-        usersAPI.getAll(),
-      ]);
-      
-      setRoles(rolesRes.data);
-      setPermissions(permsRes.data);
-      setUsers(usersRes.data);
+      // Ako korisnik nema ROLE_READ permisiju, prikazi samo vlastite uloge
+      if (!hasPermission('ROLE_READ')) {
+        if (currentUser) {
+          // Dohvati vlastite podatke
+          const userRes = await usersAPI.getById(currentUser.user_id);
+          const userData = userRes.data;
+          
+          // Prikazi samo vlastite uloge kao pojednostavljene objekte
+          const userRoles = (userData.roles || []).map((roleName, idx) => ({
+            role_id: idx + 1,
+            name: roleName,
+            description: '',
+            is_system: false,
+            permissions: [],
+            user_count: 1
+          }));
+          
+          setRoles(userRoles);
+          setPermissions([]);
+          setUsers([userData]);
+        } else {
+          setRoles([]);
+          setPermissions([]);
+          setUsers([]);
+        }
+      } else {
+        const [rolesRes, permsRes, usersRes] = await Promise.all([
+          rolesAPI.getAll(),
+          rolesAPI.getPermissions(),
+          usersAPI.getAll(),
+        ]);
+        
+        setRoles(rolesRes.data);
+        setPermissions(permsRes.data);
+        setUsers(usersRes.data);
+      }
     } catch (error) {
       if (error.response?.status === 403) {
         setError('Nemate pristup ovoj stranici. Potrebne su dodatne permisije.');
@@ -131,14 +158,14 @@ const Roles = () => {
             
             <div className="role-stats">
               <span>👥 {role.user_count} korisnika</span>
-              <span>🔑 {role.permissions?.length || 0} permisija</span>
+              <span>🔑 {role.permissions ? [...new Set(role.permissions)].length : 0} permisija</span>
             </div>
 
             <div className="permissions-list">
               <h4>Permisije:</h4>
               <div className="permissions-tags">
                 {role.permissions && role.permissions.length > 0 ? (
-                  role.permissions.map((perm, idx) => (
+                  [...new Set(role.permissions)].map((perm, idx) => (
                     <span key={idx} className="badge badge-info">
                       {perm}
                     </span>

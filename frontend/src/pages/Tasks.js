@@ -5,7 +5,7 @@ import TaskDetailsModal from '../components/TaskDetailsModal';
 import './Tasks.css';
 
 const Tasks = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +16,9 @@ const Tasks = () => {
   const [taskDetails, setTaskDetails] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [viewMode, setViewMode] = useState('all'); // 'all' or 'my'
+  // Automatski postavi 'my' ako korisnik nema TASK_READ_ALL permisiju
+  const canReadAll = hasPermission('TASK_READ_ALL');
+  const [viewMode, setViewMode] = useState(canReadAll ? 'all' : 'my'); // 'all' or 'my'
   
   // Filteri
   const [statusFilter, setStatusFilter] = useState('');
@@ -27,7 +29,7 @@ const Tasks = () => {
     description: '',
     priority: 'MEDIUM',
     due_date: '',
-    assigned_to: '',
+    assigned_to_ids: [], // Promijenjeno u listu za višestruku dodjelu
   });
 
   useEffect(() => {
@@ -40,7 +42,8 @@ const Tasks = () => {
     setError('');
     try {
       let response;
-      if (viewMode === 'my') {
+      // Ako korisnik nema TASK_READ_ALL, koristi samo /tasks/my
+      if (viewMode === 'my' || !hasPermission('TASK_READ_ALL')) {
         // Ucitaj samo moje zadatke
         response = await tasksAPI.getMyTasks();
       } else {
@@ -64,6 +67,19 @@ const Tasks = () => {
   };
 
   const loadUsers = async () => {
+    // Samo ucitaj korisnike ako ima permisiju (za dropdown dodjele zadataka)
+    if (!hasPermission('USER_READ_ALL')) {
+      // Ako nema permisiju, postavi samo sebe kao opciju
+      if (user) {
+        setUsers([{
+          user_id: user.user_id,
+          username: user.username,
+          first_name: user.first_name,
+          last_name: user.last_name
+        }]);
+      }
+      return;
+    }
     try {
       const response = await usersAPI.getAll(true); // Samo aktivni
       setUsers(response.data);
@@ -80,7 +96,7 @@ const Tasks = () => {
       description: '',
       priority: 'MEDIUM',
       due_date: '',
-      assigned_to: '',
+      assigned_to_ids: [], // Prazna lista za višestruku dodjelu
     });
     setShowModal(true);
     setError('');
@@ -100,7 +116,8 @@ const Tasks = () => {
       description: task.description || '',
       priority: task.priority,
       due_date: task.due_date ? task.due_date.split('T')[0] : '',
-      assigned_to: task.assigned_to || '',
+      // Koristi assignee_ids ako postoji, inače stari assigned_to
+      assigned_to_ids: task.assignee_ids || (task.assigned_to ? [task.assigned_to] : []),
     });
     setShowModal(true);
     setError('');
@@ -115,8 +132,14 @@ const Tasks = () => {
     try {
       const submitData = {
         ...formData,
-        assigned_to: formData.assigned_to ? parseInt(formData.assigned_to) : null,
+        // Šalje listu assignee-a
+        assigned_to_ids: formData.assigned_to_ids.map(id => parseInt(id)),
       };
+      
+      // Ukloni praznu listu ako nema assignee-a
+      if (submitData.assigned_to_ids.length === 0) {
+        delete submitData.assigned_to_ids;
+      }
 
       if (isEditing) {
         await tasksAPI.update(selectedTask.task_id, submitData);
@@ -207,7 +230,6 @@ const Tasks = () => {
   const canCreate = hasPermission('TASK_CREATE');
   const canUpdate = hasPermission('TASK_UPDATE') || hasPermission('TASK_UPDATE_ANY');
   const canDelete = hasPermission('TASK_DELETE');
-  const canReadAll = hasPermission('TASK_READ_ALL');
   const canReadSelf = hasPermission('TASK_READ_SELF');
 
   return (
@@ -326,7 +348,12 @@ const Tasks = () => {
                     {task.priority}
                   </span>
                 </td>
-                <td>{task.assigned_to_name || '-'}</td>
+                <td>
+                  {/* Prikaz svih dodijeljenih korisnika */}
+                  {task.assignee_names && task.assignee_names.length > 0 
+                    ? task.assignee_names.join(', ')
+                    : (task.assignee_name || '-')}
+                </td>
                 <td>{task.created_by_name}</td>
                 <td>
                   {task.due_date ? (
@@ -420,18 +447,25 @@ const Tasks = () => {
               </div>
 
               <div className="form-group">
-                <label>Dodijeli korisniku</label>
+                <label>Dodijeli korisnicima (možete odabrati više)</label>
                 <select
-                  value={formData.assigned_to}
-                  onChange={(e) => setFormData({...formData, assigned_to: e.target.value})}
+                  multiple
+                  value={formData.assigned_to_ids.map(String)}
+                  onChange={(e) => {
+                    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                    setFormData({...formData, assigned_to_ids: selectedOptions});
+                  }}
+                  style={{minHeight: '120px'}}
                 >
-                  <option value="">-- Nije dodijeljeno --</option>
                   {users.map(u => (
                     <option key={u.user_id} value={u.user_id}>
                       {u.first_name} {u.last_name} ({u.username})
                     </option>
                   ))}
                 </select>
+                <small style={{color: '#666', marginTop: '5px', display: 'block'}}>
+                  Držite Ctrl (Windows) ili Cmd (Mac) za odabir više korisnika
+                </small>
               </div>
 
               {error && <div className="error">{error}</div>}

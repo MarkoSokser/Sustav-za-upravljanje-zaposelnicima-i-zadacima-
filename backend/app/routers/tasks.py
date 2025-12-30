@@ -83,6 +83,8 @@ async def get_all_tasks(
             assignee_id=task['assignee_id'],
             assignee_username=task['assignee_username'],
             assignee_name=task['assignee_name'],
+            assignee_ids=task.get('assignee_ids'),
+            assignee_names=task.get('assignee_names'),
             due_status=task['due_status'],
             is_overdue=task['due_status'] == 'OVERDUE' if task['due_status'] else False
         ))
@@ -122,19 +124,21 @@ async def get_my_tasks(
             status=task['status'],
             priority=task['priority'],
             due_date=task['due_date'],
-            created_by=0,  # Nije u funkciji
-            assigned_to=None,
-            created_at=None,
-            updated_at=None,
-            completed_at=None,
-            creator_id=0,
-            creator_username="",
+            created_by=task.get('creator_id', 0),
+            assigned_to=task.get('assignee_id'),
+            created_at=task.get('created_at'),
+            updated_at=task.get('updated_at'),
+            completed_at=task.get('completed_at'),
+            creator_id=task.get('creator_id', 0),
+            creator_username=task.get('creator_username', ''),
             creator_name=task['creator_name'],
-            assignee_id=None,
-            assignee_username=None,
-            assignee_name=task['assignee_name'],
-            due_status=None,
-            is_overdue=task['is_overdue']
+            assignee_id=task.get('assignee_id'),
+            assignee_username=task.get('assignee_username'),
+            assignee_name=task.get('assignee_name'),
+            assignee_ids=task.get('assignee_ids'),
+            assignee_names=task.get('assignee_names'),
+            due_status=task.get('due_status'),
+            is_overdue=task.get('is_overdue', False)
         ))
     
     return result
@@ -191,9 +195,11 @@ async def get_task(
             detail="Zadatak nije pronadjen"
         )
     
-    # Provjera pristupa
+    # Provjera pristupa - uključi i višestruke assignee-e
+    assignee_ids = task.get('assignee_ids') or []
     can_view = (
         task['assignee_id'] == current_user['user_id'] or
+        current_user['user_id'] in assignee_ids or
         task['creator_id'] == current_user['user_id'] or
         check_permission(conn, current_user['user_id'], 'TASK_READ_ALL')
     )
@@ -222,6 +228,8 @@ async def get_task(
         assignee_id=task['assignee_id'],
         assignee_username=task['assignee_username'],
         assignee_name=task['assignee_name'],
+        assignee_ids=task.get('assignee_ids'),
+        assignee_names=task.get('assignee_names'),
         due_status=task['due_status'],
         is_overdue=task['due_status'] == 'OVERDUE' if task['due_status'] else False
     )
@@ -239,10 +247,19 @@ async def create_task(
     Koristi PostgreSQL proceduru:
     - create_task()
     
+    Podržava višestruku dodjelu putem assigned_to_ids polja.
+    
     Potrebna permisija: TASK_CREATE
     """
     try:
         with conn.cursor() as cur:
+            # Odredi assignee - prioritet ima lista, zatim pojedinačni
+            first_assignee = None
+            if task_data.assigned_to_ids and len(task_data.assigned_to_ids) > 0:
+                first_assignee = task_data.assigned_to_ids[0]
+            elif task_data.assigned_to:
+                first_assignee = task_data.assigned_to
+            
             cur.execute("""
                 CALL create_task(%s, %s, %s, %s, %s, %s, NULL)
             """, (
@@ -251,7 +268,7 @@ async def create_task(
                 task_data.priority.value,
                 task_data.due_date,
                 current_user['user_id'],
-                task_data.assigned_to
+                first_assignee
             ))
             
             # Dohvati ID novog zadatka
@@ -261,6 +278,15 @@ async def create_task(
                 ORDER BY created_at DESC LIMIT 1
             """, (task_data.title, current_user['user_id']))
             new_task = cur.fetchone()
+            
+            # Ako ima više assignee-a, dodaj ih u task_assignees tablicu
+            if new_task and task_data.assigned_to_ids and len(task_data.assigned_to_ids) > 0:
+                for user_id in task_data.assigned_to_ids:
+                    cur.execute("""
+                        INSERT INTO task_assignees (task_id, user_id, assigned_by)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (task_id, user_id) DO NOTHING
+                    """, (new_task['task_id'], user_id, current_user['user_id']))
             
     except Exception as e:
         raise HTTPException(
@@ -320,18 +346,63 @@ async def assign_task(
     conn = Depends(get_db_dependency)
 ):
     """
-    Dodjeljuje zadatak korisniku.
+    Dodjeljuje zadatak jednom ili više korisnika.
     
-    Koristi PostgreSQL proceduru:
-    - assign_task()
+    Koristi PostgreSQL tablicu task_assignees za višestruku dodjelu.
     
     Potrebna permisija: TASK_ASSIGN
     """
     try:
+        # Odredi listu korisnika za dodjelu
+        user_ids = []
+        if assignment.assignee_ids:
+            user_ids = assignment.assignee_ids
+        elif assignment.assignee_id:
+            user_ids = [assignment.assignee_id]
+        
+        if not user_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Morate odabrati barem jednog korisnika"
+            )
+        
         with conn.cursor() as cur:
+            # Provjeri da zadatak postoji
+            cur.execute("SELECT task_id FROM tasks WHERE task_id = %s", (task_id,))
+            if not cur.fetchone():
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Zadatak nije pronađen"
+                )
+            
+            # Dodaj svakog korisnika
+            for user_id in user_ids:
+                # Provjeri da korisnik postoji i aktivan je
+                cur.execute("""
+                    SELECT user_id FROM users WHERE user_id = %s AND is_active = TRUE
+                """, (user_id,))
+                if not cur.fetchone():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Korisnik s ID {user_id} ne postoji ili nije aktivan"
+                    )
+                
+                # Dodaj dodjelu
+                cur.execute("""
+                    INSERT INTO task_assignees (task_id, user_id, assigned_by)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (task_id, user_id) DO NOTHING
+                """, (task_id, user_id, current_user['user_id']))
+            
+            # Ažuriraj i staru kolonu za backward compatibility (prvi korisnik)
             cur.execute("""
-                CALL assign_task(%s, %s, %s)
-            """, (task_id, assignment.assignee_id, current_user['user_id']))
+                UPDATE tasks 
+                SET assigned_to = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE task_id = %s
+            """, (user_ids[0], task_id))
+            
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -339,7 +410,7 @@ async def assign_task(
         )
     
     return MessageResponse(
-        message=f"Zadatak ID {task_id} dodijeljen korisniku ID {assignment.assignee_id}",
+        message=f"Zadatak ID {task_id} dodijeljen korisnicima: {user_ids}",
         success=True
     )
 
@@ -411,9 +482,34 @@ async def update_task(
                 update_parts.append("due_date = %s")
                 params.append(task_data.due_date)
             
-            if task_data.assigned_to is not None:
+            # Višestruka dodjela - ako je proslijeđena lista
+            if task_data.assigned_to_ids is not None:
+                # Obriši postojeće dodjele
+                cur.execute("DELETE FROM task_assignees WHERE task_id = %s", (task_id,))
+                
+                # Dodaj nove dodjele
+                for user_id in task_data.assigned_to_ids:
+                    cur.execute("""
+                        INSERT INTO task_assignees (task_id, user_id, assigned_by)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (task_id, user_id) DO NOTHING
+                    """, (task_id, user_id, current_user['user_id']))
+                
+                # Ažuriraj staru kolonu za backward compatibility
+                if task_data.assigned_to_ids:
+                    update_parts.append("assigned_to = %s")
+                    params.append(task_data.assigned_to_ids[0])
+                else:
+                    update_parts.append("assigned_to = NULL")
+            elif task_data.assigned_to is not None:
                 update_parts.append("assigned_to = %s")
                 params.append(task_data.assigned_to)
+                # Također dodaj u novu tablicu
+                cur.execute("""
+                    INSERT INTO task_assignees (task_id, user_id, assigned_by)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (task_id, user_id) DO NOTHING
+                """, (task_id, task_data.assigned_to, current_user['user_id']))
             
             if update_parts:
                 update_parts.append("updated_at = CURRENT_TIMESTAMP")

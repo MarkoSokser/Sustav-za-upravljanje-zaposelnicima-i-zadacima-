@@ -67,7 +67,11 @@ const TaskDetailsModal = ({ task, onClose }) => {
               </div>
               <div className="detail-item">
                 <label>Dodijeljeno:</label>
-                <span>{task.assignee_name || task.assigned_to_name || 'Nije dodijeljeno'}</span>
+                <span>
+                  {task.assignee_names && task.assignee_names.length > 0 
+                    ? task.assignee_names.join(', ')
+                    : (task.assignee_name || task.assigned_to_name || 'Nije dodijeljeno')}
+                </span>
               </div>
             </div>
 
