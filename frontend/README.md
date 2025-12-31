@@ -2,7 +2,7 @@
 
 React frontend aplikacija koja prikazuje sve funkcionalnosti PostgreSQL baze podataka.
 
-## 🚀 Tehnologije
+##  Tehnologije
 
 - **React 18.2** - UI framework
 - **React Router 6** - Routing
