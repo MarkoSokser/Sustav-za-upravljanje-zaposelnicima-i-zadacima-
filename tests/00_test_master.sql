@@ -1,7 +1,7 @@
--- ============================================================================
+
 -- MASTER TEST SCRIPT - Interni sustav za upravljanje zaposlenicima i zadacima
 -- Testovi izradeni i generirani pomocu AI alata radi lakse validacije koda i baze podataka
--- ============================================================================
+-- Autor: AI Assistant
 
 \echo '========================================================================='
 \echo '  MASTER TEST SUITE - Employee Management System'
@@ -72,7 +72,7 @@ CREATE TEMP TABLE test_results (
 \echo '========================================================================='
 \echo ''
 
--- Generiranje izvješća
+
 SELECT 
     test_category,
     COUNT(*) AS total_tests,

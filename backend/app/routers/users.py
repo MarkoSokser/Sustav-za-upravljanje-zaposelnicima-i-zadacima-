@@ -108,9 +108,9 @@ async def get_user(
     """
     # Provjera pristupa
     can_view = (
-        user_id == current_user['user_id'] or  # Vlastiti podaci
-        is_manager_of_user(conn, current_user['user_id'], user_id) or  # Clan tima
-        check_permission(conn, current_user['user_id'], 'USER_READ_ALL')  # Permisija
+        user_id == current_user['user_id'] or  
+        is_manager_of_user(conn, current_user['user_id'], user_id) or  
+        check_permission(conn, current_user['user_id'], 'USER_READ_ALL')  
     )
     
     if not can_view:

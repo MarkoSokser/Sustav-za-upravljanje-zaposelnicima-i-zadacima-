@@ -20,7 +20,7 @@ CREATE DATABASE interni_sustav;
 \i database/01_schema.sql
 \i database/02_seed_data.sql
 \i database/03_functions_procedures.sql
-\i database/04_multi_assignees_migration.sql   # Višestruka dodjela zadataka
+
 
 # Provjeri instalaciju
 SELECT * FROM v_users_with_roles;
@@ -127,29 +127,4 @@ SELECT * FROM v_users_with_roles;
 -- Detalji zadataka
 SELECT * FROM v_tasks_details;
 
-
-## Brzi pregled strukture
-
-```
-TBP_projekt/
-├── database/              # PostgreSQL SQL skripte
-│   ├── 01_schema.sql
-│   ├── 02_seed_data.sql
-│   └── 03_functions_procedures.sql
-├── backend/               # FastAPI backend
-│   ├── app/
-│   │   ├── main.py       # Glavni aplikacijski file
-│   │   ├── routers/      # API rute
-│   │   └── ...
-│   └── requirements.txt
-├── frontend/              # React frontend
-│   ├── src/
-│   │   ├── pages/        # React stranice
-│   │   ├── components/   # React komponente
-│   │   └── services/     # API pozivi
-│   └── package.json
-└── Prirucnici/            # Dokumentacija
-    ├── PRIRUCNIK_PROJEKTA.md
-    └── Faza_7_Prirucnik.md
-```
 

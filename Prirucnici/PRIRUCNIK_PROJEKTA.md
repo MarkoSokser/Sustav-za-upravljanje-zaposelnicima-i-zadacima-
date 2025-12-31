@@ -171,11 +171,11 @@ Omogućiti grafičko korištenje sustava kroz React aplikaciju koja prikazuje sv
 - Filteri i sortiranje podataka
 
 ### Ishod faze
-- ✅ Funkcionalno React web sučelje
-- ✅ Prikaz svih funkcionalnosti baze podataka
-- ✅ JWT autentikacija i RBAC kontrola pristupa
-- ✅ Jednostavno i intuitivno korisničko iskustvo
-- ✅ README i detaljni priručnik (Faza_7_Prirucnik.md)  
+-  Funkcionalno React web sučelje
+-  Prikaz svih funkcionalnosti baze podataka
+-  JWT autentikacija i RBAC kontrola pristupa
+-  Jednostavno i intuitivno korisničko iskustvo
+-  README i detaljni priručnik (Faza_7_Prirucnik.md)  
 
 ---
 
@@ -236,27 +236,27 @@ U sljedećim koracima projekt će se razvijati **fazu po fazu**, koristeći ovaj
 
 ## Status implementacije
 
-✅ **Faza 1** - Definicija domene i zahtjeva - ZAVRŠENO  
-✅ **Faza 2** - Teorijski uvod - ZAVRŠENO  
-✅ **Faza 3** - Konceptualni model baze podataka - ZAVRŠENO  
-✅ **Faza 4** - Logički i objektno-relacijski model - ZAVRŠENO  
-✅ **Faza 5** - Funkcije, procedure i okidači - ZAVRŠENO  
-✅ **Faza 6** - Backend aplikacija (FastAPI) - ZAVRŠENO  
-✅ **Faza 7** - Frontend aplikacija (React) - **ZAVRŠENO**  
-✅ **Faza 8** - Automatizacija i repozitorij - ZAVRŠENO  
-⏳ **Faza 9** - Dokumentacija (LaTeX) - U TIJEKU  
-⏳ **Faza 10** - Završna provjera - SLJEDEĆE
+ **Faza 1** - Definicija domene i zahtjeva - ZAVRŠENO  
+ **Faza 2** - Teorijski uvod - ZAVRŠENO  
+ **Faza 3** - Konceptualni model baze podataka - ZAVRŠENO  
+ **Faza 4** - Logički i objektno-relacijski model - ZAVRŠENO  
+ **Faza 5** - Funkcije, procedure i okidači - ZAVRŠENO  
+ **Faza 6** - Backend aplikacija (FastAPI) - ZAVRŠENO  
+ **Faza 7** - Frontend aplikacija (React) - **ZAVRŠENO**  
+ **Faza 8** - Automatizacija i repozitorij - ZAVRŠENO  
+ **Faza 9** - Dokumentacija (LaTeX) - U TIJEKU  
+ **Faza 10** - Završna provjera - SLJEDEĆE
 
 ---
 
 ## Ključne značajke implementacije
 
-### 🔐 RBAC + Individualne permisije
+### RBAC + Individualne permisije
 Sustav koristi hibridni model kontrole pristupa:
 - **Uloge (roles)** - grupne permisije (ADMIN, MANAGER, EMPLOYEE)
 - **Direktne permisije (user_permissions)** - individualno dodijeljene/oduzete permisije
 
-### ✅ Tijek odobravanja zadataka
+###  Tijek odobravanja zadataka
 Zadaci prolaze kroz strukturirani tijek:
 ```
 TODO → IN_PROGRESS → PENDING_APPROVAL → COMPLETED
@@ -265,10 +265,10 @@ TODO → IN_PROGRESS → PENDING_APPROVAL → COMPLETED
 - **Zaposlenik** može predložiti završetak (→ PENDING_APPROVAL)
 - **Manager/Admin** može odobriti završetak (→ COMPLETED)
 
-### 🔑 Promjena lozinke
+###  Promjena lozinke
 Svi korisnici mogu promijeniti svoju lozinku putem sigurnog modala.
 
-### 📊 10 PostgreSQL tablica
+###  10 PostgreSQL tablica
 users, roles, permissions, role_permissions, user_roles, user_permissions, tasks, task_assignees, audit_log, login_events  
 
 ---
@@ -284,9 +284,8 @@ Za svaku fazu postoji **detaljan priručnik** u `Prirucnici/` direktoriju:
 - `Faza_7_Prirucnik.md` - Frontend React
 
 ### Dodatna dokumentacija
-- `images/ERA_diagram.md` - Ažurirani ERA dijagram s 10 tablica
+- `images/ERA_diagram.md` - ERA dijagram baze podataka
 - `PRISTUPNI_PODACI.md` - Pristupni podaci za sve korisnike
-- `database/04_multi_assignees_migration.sql` - Migracija za višestruke assignee
 
 ---
 

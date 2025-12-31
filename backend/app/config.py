@@ -12,14 +12,14 @@ class Settings(BaseSettings):
     Postavke aplikacije - SVE VRIJEDNOSTI SE UCITAVAJU IZ .env DATOTEKE
     """
     
-    # Database - OBAVEZNO postaviti u .env
+    # Database 
     database_host: str
     database_port: int
     database_name: str
     database_user: str
     database_password: str
     
-    # JWT - OBAVEZNO postaviti u .env
+    # JWT 
     # Generiraj secret_key: python -c "import secrets; print(secrets.token_hex(32))"
     secret_key: str
     algorithm: str = "HS256"

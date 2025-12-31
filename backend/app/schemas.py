@@ -16,7 +16,7 @@ class TaskStatus(str, Enum):
     NEW = "NEW"
     IN_PROGRESS = "IN_PROGRESS"
     ON_HOLD = "ON_HOLD"
-    PENDING_APPROVAL = "PENDING_APPROVAL"  # Employee završio, čeka odobrenje
+    PENDING_APPROVAL = "PENDING_APPROVAL"  
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
 
@@ -234,7 +234,7 @@ class UserEffectivePermission(BaseModel):
     permission_code: str
     permission_name: str
     category: str
-    source: str = 'ROLE'  # 'ROLE' ili 'DIRECT' - default ROLE za kompatibilnost
+    source: str = 'ROLE'  
 
 
 # ============== TASK MODELS ==============
@@ -249,8 +249,8 @@ class TaskBase(BaseModel):
 
 class TaskCreate(TaskBase):
     """Model za kreiranje zadatka"""
-    assigned_to: Optional[int] = None  # Backward compatibility
-    assigned_to_ids: Optional[List[int]] = None  # Nova opcija za višestruku dodjelu
+    assigned_to: Optional[int] = None  
+    assigned_to_ids: Optional[List[int]] = None  
 
 
 class TaskUpdate(BaseModel):
@@ -259,8 +259,8 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     priority: Optional[TaskPriority] = None
     due_date: Optional[date] = None
-    assigned_to: Optional[int] = None  # Backward compatibility
-    assigned_to_ids: Optional[List[int]] = None  # Nova opcija za višestruku dodjelu
+    assigned_to: Optional[int] = None  
+    assigned_to_ids: Optional[List[int]] = None 
 
 
 class TaskStatusUpdate(BaseModel):
@@ -270,8 +270,8 @@ class TaskStatusUpdate(BaseModel):
 
 class TaskAssignment(BaseModel):
     """Model za dodjelu zadatka"""
-    assignee_id: Optional[int] = None  # Za jednu osobu (backward compatibility)
-    assignee_ids: Optional[List[int]] = None  # Za više osoba
+    assignee_id: Optional[int] = None  
+    assignee_ids: Optional[List[int]] = None  
 
 
 class TaskResponse(TaskBase):
@@ -303,7 +303,6 @@ class TaskDetails(TaskBase):
     assignee_id: Optional[int] = None
     assignee_username: Optional[str] = None
     assignee_name: Optional[str] = None
-    # Novi atributi za višestruke dodijele
     assignee_ids: Optional[List[int]] = None
     assignee_names: Optional[List[str]] = None
     due_status: Optional[str] = None

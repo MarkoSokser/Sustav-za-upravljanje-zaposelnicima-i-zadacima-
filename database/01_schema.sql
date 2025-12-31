@@ -14,6 +14,7 @@ CREATE TYPE task_status AS ENUM (
     'NEW',           
     'IN_PROGRESS',   
     'ON_HOLD',       
+    'PENDING_APPROVAL',  
     'COMPLETED',     
     'CANCELLED'      
 );
@@ -264,7 +265,7 @@ CREATE TABLE audit_log (
  
     CONSTRAINT fk_audit_log_changed_by FOREIGN KEY (changed_by) 
         REFERENCES users(user_id) ON DELETE SET NULL,
-    CONSTRAINT chk_audit_log_entity CHECK (entity_name IN ('users', 'roles', 'tasks', 'user_roles', 'role_permissions')),
+    CONSTRAINT chk_audit_log_entity CHECK (entity_name IN ('users', 'roles', 'tasks', 'user_roles', 'role_permissions', 'user_permissions')),
     CONSTRAINT chk_audit_log_values CHECK (
         (action = 'INSERT' AND old_value IS NULL AND new_value IS NOT NULL) OR
         (action = 'UPDATE' AND old_value IS NOT NULL AND new_value IS NOT NULL) OR
@@ -283,6 +284,59 @@ COMMENT ON COLUMN audit_log.old_value IS 'Prethodno stanje (JSONB)';
 COMMENT ON COLUMN audit_log.new_value IS 'Novo stanje (JSONB)';
 COMMENT ON COLUMN audit_log.ip_address IS 'IP adresa korisnika';
 
+
+-- Tablica za M:N vezu između tasks i users 
+CREATE TABLE task_assignees (
+    task_assignee_id SERIAL PRIMARY KEY,
+    task_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    assigned_by INTEGER,
+    
+    CONSTRAINT fk_task_assignees_task FOREIGN KEY (task_id) 
+        REFERENCES tasks(task_id) ON DELETE CASCADE,
+    CONSTRAINT fk_task_assignees_user FOREIGN KEY (user_id) 
+        REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_task_assignees_assigned_by FOREIGN KEY (assigned_by) 
+        REFERENCES users(user_id) ON DELETE SET NULL,
+    CONSTRAINT uk_task_assignees UNIQUE (task_id, user_id)
+);
+
+COMMENT ON TABLE task_assignees IS 'Povezna tablica - dodjela zadataka korisnicima (M:N veza)';
+COMMENT ON COLUMN task_assignees.task_assignee_id IS 'Jedinstveni identifikator veze';
+COMMENT ON COLUMN task_assignees.task_id IS 'ID zadatka';
+COMMENT ON COLUMN task_assignees.user_id IS 'ID korisnika kojem je zadatak dodijeljen';
+COMMENT ON COLUMN task_assignees.assigned_at IS 'Datum i vrijeme dodjele';
+COMMENT ON COLUMN task_assignees.assigned_by IS 'ID korisnika koji je dodijelio zadatak';
+
+
+-- Tablica za direktnu dodjelu permisija korisnicima
+CREATE TABLE user_permissions (
+    user_permission_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    permission_id INTEGER NOT NULL,
+    granted BOOLEAN NOT NULL DEFAULT TRUE,  
+    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    assigned_by INTEGER,
+    notes TEXT, 
+    
+    CONSTRAINT fk_user_permissions_user FOREIGN KEY (user_id) 
+        REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_permissions_permission FOREIGN KEY (permission_id) 
+        REFERENCES permissions(permission_id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_permissions_assigned_by FOREIGN KEY (assigned_by) 
+        REFERENCES users(user_id) ON DELETE SET NULL,
+    CONSTRAINT uk_user_permissions UNIQUE (user_id, permission_id)
+);
+
+COMMENT ON TABLE user_permissions IS 'Direktna dodjela permisija korisnicima (override uloga)';
+COMMENT ON COLUMN user_permissions.user_permission_id IS 'Jedinstveni identifikator dodjele';
+COMMENT ON COLUMN user_permissions.user_id IS 'ID korisnika';
+COMMENT ON COLUMN user_permissions.permission_id IS 'ID permisije';
+COMMENT ON COLUMN user_permissions.granted IS 'TRUE=dozvola, FALSE=zabrana (override uloge)';
+COMMENT ON COLUMN user_permissions.assigned_at IS 'Datum dodjele';
+COMMENT ON COLUMN user_permissions.assigned_by IS 'ID admina koji je dodijelio';
+COMMENT ON COLUMN user_permissions.notes IS 'Opcijski komentar';
 
 
 -- INDEKSI
@@ -327,6 +381,16 @@ CREATE INDEX idx_audit_log_entity ON audit_log(entity_name, entity_id);
 CREATE INDEX idx_audit_log_changed_by ON audit_log(changed_by) WHERE changed_by IS NOT NULL;
 CREATE INDEX idx_audit_log_time ON audit_log(changed_at DESC);
 CREATE INDEX idx_audit_log_action ON audit_log(action);
+
+
+-- Indeksi za task_assignees
+CREATE INDEX idx_task_assignees_task ON task_assignees(task_id);
+CREATE INDEX idx_task_assignees_user ON task_assignees(user_id);
+
+-- Indeksi za user_permissions
+CREATE INDEX idx_user_permissions_user ON user_permissions(user_id);
+CREATE INDEX idx_user_permissions_permission ON user_permissions(permission_id);
+CREATE INDEX idx_user_permissions_granted ON user_permissions(granted);
 
 
 -- POGLEDI (VIEWS)
@@ -383,25 +447,28 @@ SELECT
     t.created_at,
     t.updated_at,
     t.completed_at,
-    c.user_id AS creator_id,
-    c.username AS creator_username,
-    c.first_name || ' ' || c.last_name AS creator_name,
-    a.user_id AS assignee_id,
-    a.username AS assignee_username,
-    a.first_name || ' ' || a.last_name AS assignee_name,
+    t.created_by AS creator_id,
+    creator.username AS creator_username,
+    creator.first_name || ' ' || creator.last_name AS creator_name,
+    t.assigned_to AS assignee_id,
+    assignee.username AS assignee_username,
+    assignee.first_name || ' ' || assignee.last_name AS assignee_name,
+    (SELECT array_agg(ta.user_id) FROM task_assignees ta WHERE ta.task_id = t.task_id) AS assignee_ids,
+    (SELECT array_agg(u.first_name || ' ' || u.last_name) FROM task_assignees ta JOIN users u ON ta.user_id = u.user_id WHERE ta.task_id = t.task_id) AS assignee_names,
+    creator.first_name || ' ' || creator.last_name AS created_by_name,
     CASE 
-        WHEN t.due_date IS NULL THEN NULL
-        WHEN t.status IN ('COMPLETED', 'CANCELLED') THEN NULL
+        WHEN t.status IN ('COMPLETED', 'CANCELLED') THEN 'DONE'
+        WHEN t.due_date IS NULL THEN 'NO_DUE_DATE'
         WHEN t.due_date < CURRENT_DATE THEN 'OVERDUE'
         WHEN t.due_date = CURRENT_DATE THEN 'DUE_TODAY'
         WHEN t.due_date <= CURRENT_DATE + INTERVAL '3 days' THEN 'DUE_SOON'
         ELSE 'ON_TRACK'
     END AS due_status
 FROM tasks t
-JOIN users c ON t.created_by = c.user_id
-LEFT JOIN users a ON t.assigned_to = a.user_id;
+LEFT JOIN users creator ON t.created_by = creator.user_id
+LEFT JOIN users assignee ON t.assigned_to = assignee.user_id;
 
-COMMENT ON VIEW v_tasks_details IS 'Detaljni pregled zadataka s informacijama o kreatoru i dodijeljenom korisniku';
+COMMENT ON VIEW v_tasks_details IS 'Detaljni pregled zadataka s informacijama o kreatoru i dodijeljenim korisnicima';
 
 
 
@@ -412,8 +479,16 @@ SELECT
     u.first_name || ' ' || u.last_name AS full_name,
     u.is_active,
     COUNT(DISTINCT t_created.task_id) AS tasks_created,
+    -- Uključi i zadatke iz task_assignees tablice
+    (SELECT COUNT(DISTINCT ta.task_id) FROM task_assignees ta WHERE ta.user_id = u.user_id) +
     COUNT(DISTINCT t_assigned.task_id) AS tasks_assigned,
+    (SELECT COUNT(DISTINCT ta.task_id) FROM task_assignees ta 
+     JOIN tasks t ON ta.task_id = t.task_id 
+     WHERE ta.user_id = u.user_id AND t.status = 'COMPLETED') +
     COUNT(DISTINCT t_completed.task_id) AS tasks_completed,
+    (SELECT COUNT(DISTINCT ta.task_id) FROM task_assignees ta 
+     JOIN tasks t ON ta.task_id = t.task_id 
+     WHERE ta.user_id = u.user_id AND t.status NOT IN ('COMPLETED', 'CANCELLED')) +
     COUNT(DISTINCT t_active.task_id) AS tasks_active,
     (SELECT COUNT(*) FROM login_events le WHERE le.user_id = u.user_id AND le.success = TRUE) AS successful_logins,
     (SELECT MAX(login_time) FROM login_events le WHERE le.user_id = u.user_id AND le.success = TRUE) AS last_login
@@ -447,3 +522,46 @@ GROUP BY m.user_id, m.username, m.first_name, m.last_name,
          e.user_id, e.username, e.first_name, e.last_name, e.email, e.is_active;
 
 COMMENT ON VIEW v_manager_team IS 'Pregled clanova tima za svakog managera';
+
+
+-- View za prikaz korisnika s efektivnim permisijama
+CREATE VIEW v_users_with_permissions AS
+SELECT 
+    u.user_id,
+    u.username,
+    u.first_name,
+    u.last_name,
+    u.email,
+    u.is_active,
+    ARRAY_AGG(DISTINCT r.name ORDER BY r.name) FILTER (WHERE r.name IS NOT NULL) AS roles,
+    (
+        SELECT ARRAY_AGG(DISTINCT p.code ORDER BY p.code)
+        FROM user_roles ur2
+        JOIN role_permissions rp ON ur2.role_id = rp.role_id
+        JOIN permissions p ON rp.permission_id = p.permission_id
+        WHERE ur2.user_id = u.user_id
+        AND NOT EXISTS (
+            SELECT 1 FROM user_permissions up 
+            WHERE up.user_id = u.user_id 
+            AND up.permission_id = p.permission_id 
+            AND up.granted = FALSE
+        )
+    ) AS effective_permissions,
+    (
+        SELECT ARRAY_AGG(DISTINCT p.code ORDER BY p.code)
+        FROM user_permissions up
+        JOIN permissions p ON up.permission_id = p.permission_id
+        WHERE up.user_id = u.user_id AND up.granted = TRUE
+    ) AS direct_granted_permissions,
+    (
+        SELECT ARRAY_AGG(DISTINCT p.code ORDER BY p.code)
+        FROM user_permissions up
+        JOIN permissions p ON up.permission_id = p.permission_id
+        WHERE up.user_id = u.user_id AND up.granted = FALSE
+    ) AS direct_denied_permissions
+FROM users u
+LEFT JOIN user_roles ur ON u.user_id = ur.user_id
+LEFT JOIN roles r ON ur.role_id = r.role_id
+GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.email, u.is_active;
+
+COMMENT ON VIEW v_users_with_permissions IS 'Korisnici s efektivnim permisijama (uloge + direktne dodjele)';

@@ -86,7 +86,6 @@ Nakon što pokrenete SQL skripte, sve ove lozinke će biti aktivne:
 database/01_schema.sql
 database/02_seed_data.sql
 database/03_functions_procedures.sql
-database/04_multi_assignees_migration.sql
 ```
 
 ## Tijek odobravanja zadataka

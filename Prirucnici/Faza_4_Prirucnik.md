@@ -41,12 +41,12 @@ ENUM tipovi osiguravaju da atribut može imati samo unaprijed definirane vrijedn
 ```sql
 -- Status zadatka (ažurirano s PENDING_APPROVAL)
 CREATE TYPE task_status AS ENUM (
-    'NEW',              -- Novi zadatak
-    'IN_PROGRESS',      -- U tijeku
-    'ON_HOLD',          -- Na čekanju
-    'PENDING_APPROVAL', -- Čeka odobrenje managera (NOVO)
-    'COMPLETED',        -- Završeno
-    'CANCELLED'         -- Otkazano
+    'NEW',              
+    'IN_PROGRESS',     
+    'ON_HOLD',          
+    'PENDING_APPROVAL', 
+    'COMPLETED',        
+    'CANCELLED'        
 );
 
 -- Prioritet zadatka
@@ -153,7 +153,7 @@ CREATE TABLE user_permissions (
     user_permission_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     permission_id INTEGER NOT NULL REFERENCES permissions(permission_id) ON DELETE CASCADE,
-    is_granted BOOLEAN NOT NULL DEFAULT TRUE,  -- TRUE = dozvoljeno, FALSE = zabranjeno
+    is_granted BOOLEAN NOT NULL DEFAULT TRUE,  
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     assigned_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
     CONSTRAINT uk_user_permissions UNIQUE (user_id, permission_id)

@@ -147,15 +147,15 @@ Kreira novog korisnika i dodjeljuje mu pocetnu ulogu.
 
 ```sql
 CALL create_user(
-    'novi_korisnik',           -- username
-    'novi@example.com',        -- email
-    '$2b$12$hash...',         -- password_hash
-    'Novo',                    -- first_name
-    'Prezime',                 -- last_name
-    2,                         -- manager_id
-    'EMPLOYEE',                -- role_name
-    1,                         -- created_by
-    NULL                       -- OUT: p_new_user_id
+    'novi_korisnik',           
+    'novi@example.com',        
+    '$2b$12$hash...',         
+    'Novo',                   
+    'Prezime',                 
+    2,                         
+    'EMPLOYEE',               
+    1,                         
+    NULL                       
 );
 ```
 
@@ -164,13 +164,13 @@ Azurira podatke korisnika.
 
 ```sql
 CALL update_user(
-    4,                         -- user_id
-    'NovoIme',                -- first_name
-    NULL,                      -- last_name (bez promjene)
-    NULL,                      -- email (bez promjene)
-    NULL,                      -- manager_id (bez promjene)
-    NULL,                      -- is_active (bez promjene)
-    1                          -- updated_by
+    4,                         
+    'NovoIme',              
+    NULL,                      
+    NULL,                      
+    NULL,                     
+    NULL,                     
+    1                         
 );
 ```
 
@@ -186,13 +186,13 @@ Kreira novi zadatak.
 
 ```sql
 CALL create_task(
-    'Novi zadatak',            -- title
-    'Opis zadatka',            -- description
-    'HIGH',                    -- priority
-    '2025-12-31',              -- due_date
-    2,                         -- created_by
-    4,                         -- assigned_to
-    NULL                       -- OUT: p_new_task_id
+    'Novi zadatak',           
+    'Opis zadatka',            
+    'HIGH',                    
+    '2025-12-31',             
+    2,                        
+    4,                         
+    NULL                       
 );
 ```
 
@@ -309,11 +309,11 @@ Loguje pokusaj prijave u sustav.
 
 ```sql
 SELECT log_login_attempt(
-    'admin',                   -- username
-    '192.168.1.1'::INET,       -- ip_address
-    'Mozilla/5.0...',          -- user_agent
-    TRUE,                      -- success
-    NULL                       -- failure_reason
+    'admin',                  
+    '192.168.1.1'::INET,      
+    'Mozilla/5.0...',          
+    TRUE,                     
+    NULL                       
 );
 ```
 
@@ -324,23 +324,4 @@ SELECT log_login_attempt(
 
 ---
 
-## Testiranje
 
-```sql
--- Postavi search_path
-SET search_path TO employee_management;
-
--- Test RBAC
-SELECT user_has_permission(1, 'TASK_DELETE');  -- TRUE (admin)
-SELECT user_has_permission(4, 'TASK_DELETE');  -- FALSE (employee)
-
--- Test statistike
-SELECT * FROM get_task_statistics(4);
-
--- Test tima
-SELECT * FROM get_team_members(2);
-
--- Test audit loga
-UPDATE users SET first_name = 'Test' WHERE user_id = 1;
-SELECT * FROM audit_log WHERE entity_name = 'users' ORDER BY audit_log_id DESC LIMIT 1;
-```

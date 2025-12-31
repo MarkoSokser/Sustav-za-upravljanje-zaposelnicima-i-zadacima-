@@ -1,6 +1,6 @@
-# 🧪 Test Suite - Employee Management System
+# Master Test Suite - Employee Management System
 
-Kompletna test suite za testiranje PostgreSQL baze podataka.
+Kompletna test  za testiranje PostgreSQL baze podataka.
 
 ##  Pregled Testova
 

@@ -73,53 +73,97 @@ COMMENT ON FUNCTION check_password_strength(TEXT) IS 'Provjerava jacinu lozinke 
 
 
 
--- Funkcija za provjeru da li korisnik ima odredjenu permisiju
+-- Funkcija za provjeru da li korisnik ima odredjenu permisiju (uključuje direktne permisije)
 CREATE OR REPLACE FUNCTION user_has_permission(
     p_user_id INTEGER,
     p_permission_code VARCHAR(50)
 )
 RETURNS BOOLEAN AS $$
 DECLARE
-    v_has_permission BOOLEAN;
+    v_permission_id INTEGER;
+    v_direct_grant BOOLEAN;
+    v_has_via_role BOOLEAN;
 BEGIN
+    -- Dohvati permission_id
+    SELECT permission_id INTO v_permission_id 
+    FROM permissions WHERE code = p_permission_code;
+    
+    IF v_permission_id IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    
+    -- Provjeri direktnu dodjelu (prioritet)
+    SELECT granted INTO v_direct_grant
+    FROM user_permissions
+    WHERE user_id = p_user_id AND permission_id = v_permission_id;
+    
+    -- Ako postoji direktna dodjela, koristi tu vrijednost
+    IF v_direct_grant IS NOT NULL THEN
+        RETURN v_direct_grant;
+    END IF;
+    
+    -- Inace provjeri kroz uloge
     SELECT EXISTS(
         SELECT 1
         FROM user_roles ur
         JOIN role_permissions rp ON ur.role_id = rp.role_id
-        JOIN permissions p ON rp.permission_id = p.permission_id
         WHERE ur.user_id = p_user_id
-        AND p.code = p_permission_code
-    ) INTO v_has_permission;
+        AND rp.permission_id = v_permission_id
+    ) INTO v_has_via_role;
     
-    RETURN v_has_permission;
+    RETURN v_has_via_role;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
-COMMENT ON FUNCTION user_has_permission(INTEGER, VARCHAR) IS 'Provjerava da li korisnik ima odredjenu permisiju kroz svoje uloge';
+COMMENT ON FUNCTION user_has_permission(INTEGER, VARCHAR) IS 'Provjerava da li korisnik ima permisiju (direktna dodjela ima prioritet)';
 
 
--- Funkcija za dohvacanje svih permisija korisnika
+-- Funkcija za dohvacanje svih permisija korisnika (iz uloga + direktno dodijeljene)
 CREATE OR REPLACE FUNCTION get_user_permissions(p_user_id INTEGER)
 RETURNS TABLE(
     permission_code VARCHAR(50),
     permission_name VARCHAR(100),
-    category VARCHAR(20)
+    category VARCHAR(50),
+    source VARCHAR(20)
 ) AS $$
 BEGIN
     RETURN QUERY
+    -- Permisije iz uloga (ako nisu eksplicitno zabranjene)
     SELECT DISTINCT 
-        p.code,
-        p.name,
-        p.category
+        p.code::VARCHAR(50),
+        p.name::VARCHAR(100),
+        p.category::VARCHAR(50),
+        'ROLE'::VARCHAR(20) as source
     FROM user_roles ur
     JOIN role_permissions rp ON ur.role_id = rp.role_id
     JOIN permissions p ON rp.permission_id = p.permission_id
     WHERE ur.user_id = p_user_id
-    ORDER BY p.category, p.code;
+    AND NOT EXISTS (
+        -- Provjeri da permisija nije eksplicitno zabranjena
+        SELECT 1 FROM user_permissions up 
+        WHERE up.user_id = p_user_id 
+        AND up.permission_id = p.permission_id 
+        AND up.granted = FALSE
+    )
+    
+    UNION
+    
+    -- Direktno dodijeljene permisije (granted = TRUE)
+    SELECT DISTINCT
+        p.code::VARCHAR(50),
+        p.name::VARCHAR(100),
+        p.category::VARCHAR(50),
+        'DIRECT'::VARCHAR(20) as source
+    FROM user_permissions up
+    JOIN permissions p ON up.permission_id = p.permission_id
+    WHERE up.user_id = p_user_id
+    AND up.granted = TRUE
+    
+    ORDER BY category, permission_code;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
-COMMENT ON FUNCTION get_user_permissions(INTEGER) IS 'Vraca sve permisije koje korisnik ima kroz svoje uloge';
+COMMENT ON FUNCTION get_user_permissions(INTEGER) IS 'Vraca sve permisije korisnika (iz uloga + direktno dodijeljene, minus zabranjene)';
 
 
 -- Funkcija za dohvacanje uloga korisnika
@@ -463,57 +507,81 @@ $$;
 COMMENT ON PROCEDURE create_task IS 'Kreira novi zadatak';
 
 
--- Procedura za azuriranje statusa zadatka
+-- Procedura za azuriranje statusa zadatka (s podrškom za PENDING_APPROVAL workflow)
 CREATE OR REPLACE PROCEDURE update_task_status(
     p_task_id INTEGER,
-    p_new_status task_status,
-    p_updated_by INTEGER
+    p_new_status VARCHAR(20),
+    p_changed_by INTEGER
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_current_status task_status;
-    v_assigned_to INTEGER;
-    v_created_by INTEGER;
+    v_current_status VARCHAR(20);
+    v_creator_id INTEGER;
+    v_is_assignee BOOLEAN;
+    v_is_manager_or_admin BOOLEAN;
 BEGIN
-    -- Dohvati trenutni status i dodijeljenost
-    SELECT status, assigned_to, created_by 
-    INTO v_current_status, v_assigned_to, v_created_by
+    -- Dohvati trenutni status i kreatora
+    SELECT status, created_by INTO v_current_status, v_creator_id
     FROM tasks WHERE task_id = p_task_id;
     
-    IF v_current_status IS NULL THEN
-        RAISE EXCEPTION 'Zadatak sa ID % ne postoji', p_task_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Zadatak ID % ne postoji', p_task_id;
     END IF;
     
-    -- Provjeri da li korisnik ima pravo azurirati ovaj zadatak
-    IF v_assigned_to != p_updated_by AND v_created_by != p_updated_by THEN
-        -- Provjeri da li ima TASK_UPDATE_ANY permisiju
-        IF NOT user_has_permission(p_updated_by, 'TASK_UPDATE_ANY') THEN
-            RAISE EXCEPTION 'Nemate dozvolu za azuriranje ovog zadatka';
+    -- Provjeri je li korisnik assignee
+    SELECT EXISTS (
+        SELECT 1 FROM task_assignees 
+        WHERE task_id = p_task_id AND user_id = p_changed_by
+    ) OR EXISTS (
+        SELECT 1 FROM tasks 
+        WHERE task_id = p_task_id AND assigned_to = p_changed_by
+    ) INTO v_is_assignee;
+    
+    -- Provjeri je li manager ili admin
+    SELECT EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id = p_changed_by AND r.name IN ('ADMIN', 'MANAGER')
+    ) INTO v_is_manager_or_admin;
+    
+    -- Pravila za promjenu statusa:
+    
+    -- 1. Završeni i otkazani zadaci se ne mogu mijenjati
+    IF v_current_status IN ('COMPLETED', 'CANCELLED') THEN
+        RAISE EXCEPTION 'Zadatak je već završen ili otkazan i ne može se mijenjati';
+    END IF;
+    
+    -- 2. Employee može staviti samo na PENDING_APPROVAL (ne direktno COMPLETED)
+    IF NOT v_is_manager_or_admin AND p_new_status = 'COMPLETED' THEN
+        RAISE EXCEPTION 'Samo manager ili admin mogu završiti zadatak. Koristite "Predaj na odobrenje".';
+    END IF;
+    
+    -- 3. Samo manager/admin mogu odobriti PENDING_APPROVAL -> COMPLETED
+    IF v_current_status = 'PENDING_APPROVAL' AND p_new_status = 'COMPLETED' THEN
+        IF NOT v_is_manager_or_admin THEN
+            RAISE EXCEPTION 'Samo manager ili admin mogu odobriti završetak zadatka';
         END IF;
     END IF;
     
-    -- Validacija tranzicije statusa
-    IF v_current_status = 'COMPLETED' AND p_new_status != 'COMPLETED' THEN
-        RAISE EXCEPTION 'Nije moguce promijeniti status zavrsenog zadatka';
-    END IF;
+    -- 4. Manager/Admin mogu odbiti PENDING_APPROVAL -> vratiti na IN_PROGRESS
+    -- (ovo je dozvoljeno automatski)
     
-    IF v_current_status = 'CANCELLED' THEN
-        RAISE EXCEPTION 'Nije moguce promijeniti status otkazanog zadatka';
-    END IF;
-    
-    -- Azuriraj status
-    UPDATE tasks SET 
-        status = p_new_status,
-        completed_at = CASE WHEN p_new_status = 'COMPLETED' THEN CURRENT_TIMESTAMP ELSE NULL END,
-        updated_at = CURRENT_TIMESTAMP
+    -- Ažuriraj status
+    UPDATE tasks 
+    SET status = p_new_status::task_status,
+        updated_at = CURRENT_TIMESTAMP,
+        completed_at = CASE 
+            WHEN p_new_status = 'COMPLETED' THEN CURRENT_TIMESTAMP 
+            ELSE completed_at 
+        END
     WHERE task_id = p_task_id;
     
-    RAISE NOTICE 'Status zadatka ID % promijenjen iz % u %', p_task_id, v_current_status, p_new_status;
+    RAISE NOTICE 'Status zadatka % promijenjen iz % u %', p_task_id, v_current_status, p_new_status;
 END;
 $$;
 
-COMMENT ON PROCEDURE update_task_status IS 'Azurira status zadatka sa validacijom permisija';
+COMMENT ON PROCEDURE update_task_status IS 'Azurira status zadatka sa validacijom permisija i PENDING_APPROVAL workflow';
 
 
 -- Procedura za dodjelu zadatka korisniku
@@ -960,3 +1028,244 @@ $$;
 
 COMMENT ON PROCEDURE cleanup_old_login_events IS 'Brise login evente starije od zadanog broja dana';
 
+
+-- Procedura za dodjelu zadatka višestrukim korisnicima
+CREATE OR REPLACE PROCEDURE assign_task_to_users(
+    p_task_id INTEGER,
+    p_user_ids INTEGER[],
+    p_assigned_by INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_user_id INTEGER;
+BEGIN
+    -- Provjera da zadatak postoji
+    IF NOT EXISTS (SELECT 1 FROM tasks WHERE task_id = p_task_id) THEN
+        RAISE EXCEPTION 'Zadatak s ID % ne postoji', p_task_id;
+    END IF;
+    
+    -- Dodaj svakog korisnika
+    FOREACH v_user_id IN ARRAY p_user_ids
+    LOOP
+        -- Provjeri da korisnik postoji i aktivan je
+        IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = v_user_id AND is_active = TRUE) THEN
+            RAISE EXCEPTION 'Korisnik s ID % ne postoji ili nije aktivan', v_user_id;
+        END IF;
+        
+        -- Dodaj dodjelu (ignoriraj duplikate)
+        INSERT INTO task_assignees (task_id, user_id, assigned_by)
+        VALUES (p_task_id, v_user_id, p_assigned_by)
+        ON CONFLICT (task_id, user_id) DO NOTHING;
+    END LOOP;
+    
+    -- Ažuriraj i staru kolonu za backward compatibility (prvi korisnik)
+    UPDATE tasks 
+    SET assigned_to = p_user_ids[1],
+        updated_at = CURRENT_TIMESTAMP
+    WHERE task_id = p_task_id;
+END;
+$$;
+
+COMMENT ON PROCEDURE assign_task_to_users IS 'Dodjeljuje zadatak višestrukim korisnicima';
+
+
+-- Procedura za uklanjanje dodjele zadatka
+CREATE OR REPLACE PROCEDURE unassign_task_from_user(
+    p_task_id INTEGER,
+    p_user_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM task_assignees 
+    WHERE task_id = p_task_id AND user_id = p_user_id;
+    
+    -- Ako je uklonjen korisnik iz stare kolone, postavi na sljedećeg
+    UPDATE tasks 
+    SET assigned_to = (
+        SELECT user_id FROM task_assignees 
+        WHERE task_id = p_task_id 
+        LIMIT 1
+    ),
+    updated_at = CURRENT_TIMESTAMP
+    WHERE task_id = p_task_id AND assigned_to = p_user_id;
+END;
+$$;
+
+COMMENT ON PROCEDURE unassign_task_from_user IS 'Uklanja dodjelu zadatka od korisnika';
+
+
+-- Trigger za sinkronizaciju assigned_to s task_assignees (backward compatibility)
+CREATE OR REPLACE FUNCTION sync_task_assignees()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+        -- Kada se postavi assigned_to direktno, dodaj i u novu tablicu
+        IF NEW.assigned_to IS NOT NULL AND (OLD IS NULL OR NEW.assigned_to != OLD.assigned_to) THEN
+            INSERT INTO task_assignees (task_id, user_id, assigned_by)
+            VALUES (NEW.task_id, NEW.assigned_to, NEW.created_by)
+            ON CONFLICT (task_id, user_id) DO NOTHING;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_task_assignees ON tasks;
+CREATE TRIGGER trg_sync_task_assignees
+AFTER INSERT OR UPDATE OF assigned_to ON tasks
+FOR EACH ROW
+EXECUTE FUNCTION sync_task_assignees();
+
+COMMENT ON FUNCTION sync_task_assignees() IS 'Sinkronizira staru assigned_to kolonu s novom task_assignees tablicom';
+
+
+-- Funkcija za dohvat direktnih permisija korisnika
+CREATE OR REPLACE FUNCTION get_user_direct_permissions(p_user_id INTEGER)
+RETURNS TABLE(
+    permission_code VARCHAR(50), 
+    permission_name VARCHAR(100), 
+    category VARCHAR(50),
+    granted BOOLEAN,
+    assigned_at TIMESTAMP,
+    assigned_by_name TEXT,
+    notes TEXT
+)
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        p.code::VARCHAR(50),
+        p.name::VARCHAR(100),
+        p.category::VARCHAR(50),
+        up.granted,
+        up.assigned_at,
+        (SELECT first_name || ' ' || last_name FROM users WHERE user_id = up.assigned_by)::TEXT,
+        up.notes
+    FROM user_permissions up
+    JOIN permissions p ON up.permission_id = p.permission_id
+    WHERE up.user_id = p_user_id
+    ORDER BY p.category, p.code;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+COMMENT ON FUNCTION get_user_direct_permissions(INTEGER) IS 'Vraca sve direktno dodijeljene/zabranjene permisije korisnika';
+
+
+-- Procedura za dodjelu direktne permisije korisniku
+CREATE OR REPLACE PROCEDURE assign_user_permission(
+    p_user_id INTEGER,
+    p_permission_code VARCHAR(50),
+    p_granted BOOLEAN,
+    p_assigned_by INTEGER,
+    p_notes TEXT DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_permission_id INTEGER;
+BEGIN
+    -- Dohvati permission_id
+    SELECT permission_id INTO v_permission_id 
+    FROM permissions WHERE code = p_permission_code;
+    
+    IF v_permission_id IS NULL THEN
+        RAISE EXCEPTION 'Permisija % ne postoji', p_permission_code;
+    END IF;
+    
+    -- Provjeri da korisnik postoji
+    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+        RAISE EXCEPTION 'Korisnik s ID % ne postoji', p_user_id;
+    END IF;
+    
+    -- Umetni ili azuriraj
+    INSERT INTO user_permissions (user_id, permission_id, granted, assigned_by, notes)
+    VALUES (p_user_id, v_permission_id, p_granted, p_assigned_by, p_notes)
+    ON CONFLICT (user_id, permission_id) DO UPDATE SET
+        granted = EXCLUDED.granted,
+        assigned_at = CURRENT_TIMESTAMP,
+        assigned_by = EXCLUDED.assigned_by,
+        notes = EXCLUDED.notes;
+END;
+$$;
+
+COMMENT ON PROCEDURE assign_user_permission IS 'Dodjeljuje ili zabranjuje direktnu permisiju korisniku';
+
+
+-- Procedura za uklanjanje direktne permisije (vraca na default iz uloge)
+CREATE OR REPLACE PROCEDURE remove_user_permission(
+    p_user_id INTEGER,
+    p_permission_code VARCHAR(50)
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_permission_id INTEGER;
+BEGIN
+    SELECT permission_id INTO v_permission_id 
+    FROM permissions WHERE code = p_permission_code;
+    
+    IF v_permission_id IS NULL THEN
+        RAISE EXCEPTION 'Permisija % ne postoji', p_permission_code;
+    END IF;
+    
+    DELETE FROM user_permissions 
+    WHERE user_id = p_user_id AND permission_id = v_permission_id;
+END;
+$$;
+
+COMMENT ON PROCEDURE remove_user_permission IS 'Uklanja direktnu permisiju korisnika (vraca na default iz uloge)';
+
+
+-- Trigger za audit log user_permissions
+CREATE OR REPLACE FUNCTION trg_audit_user_permissions()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO audit_log (entity_name, entity_id, action, changed_by, old_value, new_value)
+        VALUES ('user_permissions', NEW.user_permission_id, 'INSERT', NEW.assigned_by, NULL,
+            jsonb_build_object(
+                'user_id', NEW.user_id,
+                'permission_id', NEW.permission_id,
+                'granted', NEW.granted,
+                'notes', NEW.notes
+            ));
+        RETURN NEW;
+    ELSIF TG_OP = 'UPDATE' THEN
+        INSERT INTO audit_log (entity_name, entity_id, action, changed_by, old_value, new_value)
+        VALUES ('user_permissions', NEW.user_permission_id, 'UPDATE', NEW.assigned_by,
+            jsonb_build_object(
+                'user_id', OLD.user_id,
+                'permission_id', OLD.permission_id,
+                'granted', OLD.granted,
+                'notes', OLD.notes
+            ),
+            jsonb_build_object(
+                'user_id', NEW.user_id,
+                'permission_id', NEW.permission_id,
+                'granted', NEW.granted,
+                'notes', NEW.notes
+            ));
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO audit_log (entity_name, entity_id, action, changed_by, old_value, new_value)
+        VALUES ('user_permissions', OLD.user_permission_id, 'DELETE', NULL,
+            jsonb_build_object(
+                'user_id', OLD.user_id,
+                'permission_id', OLD.permission_id,
+                'granted', OLD.granted,
+                'notes', OLD.notes
+            ), NULL);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_user_permissions_audit ON user_permissions;
+CREATE TRIGGER trg_user_permissions_audit
+    AFTER INSERT OR UPDATE OR DELETE ON user_permissions
+    FOR EACH ROW EXECUTE FUNCTION trg_audit_user_permissions();
+
+COMMENT ON FUNCTION trg_audit_user_permissions() IS 'Audit trail za promjene direktnih korisnickih permisija';

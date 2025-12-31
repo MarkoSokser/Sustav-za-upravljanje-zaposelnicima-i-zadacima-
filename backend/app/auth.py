@@ -75,14 +75,14 @@ def authenticate_user(conn, username: str, password: str) -> Optional[dict]:
         user = cur.fetchone()
         
         if not user:
-            print(f"❌ User not found: {username}")
+            print(f" User not found: {username}")
             return None
         
         if not user['is_active']:
-            print(f"❌ User inactive: {username}")
+            print(f" User inactive: {username}")
             return None
         
-        print(f"🔍 Password verification for {username}:")
+        print(f" Password verification for {username}:")
         print(f"   - Password length: {len(password)}")
         print(f"   - Password: {password}")
         print(f"   - Hash from DB: {user['password_hash'][:60]}...")

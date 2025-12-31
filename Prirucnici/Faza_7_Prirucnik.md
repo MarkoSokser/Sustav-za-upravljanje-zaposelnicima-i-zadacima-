@@ -130,7 +130,7 @@ Sve rute osim login stranice su zaštićene:
 
 ---
 
-### 1.1  Promjena lozinke (NOVO)
+### 1.1  Promjena lozinke 
 
 **Funkcionalnost:** Korisnik može promijeniti svoju lozinku putem modala u headeru (ikona 🔑).
 
@@ -237,7 +237,7 @@ CALL sp_create_user(
 - **Filter po statusu** - ENUM `task_status`
 - **Filter po prioritetu** - ENUM `task_priority`
 
-**Workflow odobravanja zadataka (NOVO):**
+**Workflow odobravanja zadataka :**
 
 ```
 ┌─────────┐     ┌─────────────┐     ┌───────────────────┐     ┌───────────┐
@@ -304,27 +304,6 @@ CALL update_task_status(task_id, 'PENDING_APPROVAL', user_id);
 - **Zaštita sistemskih uloga** - Constraint
 - **Direktne permisije** - Dodaj/ukloni individualnu permisiju korisniku
 
-**Hibridni RBAC Model:**
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    KORISNIK                                  │
-├─────────────────────────────────────────────────────────────┤
-│                         │                                    │
-│    ┌────────────────────┴────────────────────┐              │
-│    ▼                                          ▼              │
-│ ULOGE (roles)                    DIREKTNE PERMISIJE          │
-│ ┌─────────────┐                  ┌─────────────────────┐    │
-│ │ user_roles  │                  │ user_permissions    │    │
-│ └──────┬──────┘                  │ is_granted = true   │    │
-│        ▼                         │ is_granted = false  │    │
-│ role_permissions                 └─────────────────────┘    │
-│        │                                                     │
-│        ▼                                                     │
-│   PERMISIJE                                                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Prioritet:** Direktne permisije > Permisije iz uloga
 
 **RBAC Model po ulogama:**
 ```
@@ -356,11 +335,6 @@ EMPLOYEE (role_id=3)
 └── USER_READ_OWN
 ```
 
-**UI za direktne permisije (Users stranica):**
-1. Otvori korisnika za uređivanje
-2. Klikni "Upravljanje permisijama"
-3. Odaberi permisije za dodati/ukloniti
-4. Spremi promjene
 
 **SQL pozadina:**
 ```sql
@@ -525,12 +499,6 @@ auditAPI.getRecentActivity(limit)
 
 ##  UI/UX Značajke
 
-### Design principi
-- **Jednostavnost** - Fokus na funkcionalnost, ne na dekoraciju
-- **Konzistentnost** - Sve stranice imaju isti layout i stil
-- **Feedback** - Jasne poruke o uspjehu/grešci
-- **Pristupačnost** - Intuitivna navigacija
-
 ### Vizualni elementi
 
 **Badge komponente:**
@@ -606,17 +574,4 @@ HIGH - crvena (danger)
 4. **Rezultat**: Koristi se `task_priority` ENUM tip
 
 
-
-### Environment variables
-
-Za produkciju, koristi `.env` file:
-
-```
-REACT_APP_API_URL=https://api.tvoja-domena.com
-```
-
-Promijeni u `api.js`:
-```javascript
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-```
 

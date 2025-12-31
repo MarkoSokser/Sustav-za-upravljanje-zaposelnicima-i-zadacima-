@@ -38,7 +38,7 @@ CREATE DATABASE interni_sustav;
 \i database/01_schema.sql
 \i database/02_seed_data.sql
 \i database/03_functions_procedures.sql
-\i database/04_multi_assignees_migration.sql  # Višestruka dodjela zadataka
+
 ```
 
 **2. Backend:**
@@ -76,8 +76,7 @@ TBP_projekt/
 ├── database/                    # PostgreSQL baza
 │   ├── 01_schema.sql           # Shema (tablice, ENUM, COMPOSITE, domene, viewovi)
 │   ├── 02_seed_data.sql        # Početni podaci (demo korisnici)
-│   ├── 03_functions_procedures.sql  # 11 funkcija, 10 procedura, 7 triggera
-│   └── 04_multi_assignees_migration.sql  # Višestruka dodjela zadataka (M:N)
+│   └── 03_functions_procedures.sql  # Funkcije, procedure, triggeri
 ├── backend/                     # FastAPI REST API
 │   ├── app/
 │   │   ├── main.py             # Glavna aplikacija

@@ -1,16 +1,6 @@
 """
 FastAPI Main Application
 Interni sustav za upravljanje zaposlenicima i zadacima - Backend API
-
-Ovaj backend demonstrira koristenje PostgreSQL baze podataka sa:
-- ENUM tipovima (task_status, task_priority, audit_action)
-- COMPOSITE tipovima (timestamp_metadata, address_info)
-- Domenama (email_address, username_type)
-- Funkcijama (validate_email, user_has_permission, get_user_tasks, itd.)
-- Procedurama (create_user, create_task, assign_role, itd.)
-- Trigger-ima (audit logovi, auto-update timestamps)
-- Pogledima (v_users_with_roles, v_tasks_details, itd.)
-- RBAC modelom (Role-Based Access Control)
 """
 
 from fastapi import FastAPI, Request

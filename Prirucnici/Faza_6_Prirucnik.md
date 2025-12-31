@@ -84,43 +84,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 | POST | `/validate-password` | Provjeri lozinku | `check_password_strength()` |
 | **POST** | **`/change-password`** | **Promijeni lozinku** | **direktni SQL** |
 
-#### Primjer promjene lozinke (NOVO)
 
-```bash
-curl -X POST "http://localhost:8000/api/auth/change-password" \
-  -H "Authorization: Bearer {token}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "current_password": "StaraLozinka123!",
-    "new_password": "NovaLozinka456!"
-  }'
-```
-
-**Response:**
-```json
-{
-  "message": "Lozinka uspješno promijenjena",
-  "success": true
-}
-```
-
-#### Primjer prijave
-
-```bash
-curl -X POST "http://localhost:8000/api/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin&password=Admin123!"
-```
-
-**Response:**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
-}
-```
-
----
 
 ### 4.2 Korisnici (`/api/users`)
 
@@ -139,24 +103,7 @@ curl -X POST "http://localhost:8000/api/auth/login" \
 | DELETE | `/{id}` | Deaktiviraj korisnika | USER_DELETE | `deactivate_user()` |
 | DELETE | `/{id}/permissions/{perm}` | **NOVO** Ukloni permisiju | PERMISSION_MANAGE | `user_permissions` |
 
-**\*** - Vlastiti podaci ili člana tima
 
-#### Primjer kreiranja korisnika
-
-```bash
-curl -X POST "http://localhost:8000/api/users" \
-  -H "Authorization: Bearer {token}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "novi_korisnik",
-    "email": "novi@example.com",
-    "password": "Strong@Pass123",
-    "first_name": "Novi",
-    "last_name": "Korisnik",
-    "manager_id": 2,
-    "role_name": "EMPLOYEE"
-  }'
-```
 
 ---
 
@@ -174,33 +121,14 @@ curl -X POST "http://localhost:8000/api/users" \
 | PUT | `/{id}/assign` | Dodijeli zadatak | TASK_ASSIGN | `task_assignees` |
 | DELETE | `/{id}` | Obriši zadatak | TASK_DELETE | direktni SQL |
 
-#### Workflow odobravanja zadataka (NOVO)
+#### Workflow odobravanja zadataka 
 
 **Pravila promjene statusa:**
 - **Employee** može: NEW → IN_PROGRESS → ON_HOLD → PENDING_APPROVAL
 - **Employee NE MOŽE** direktno staviti COMPLETED
 - **Manager/Admin** može odobriti: PENDING_APPROVAL → COMPLETED
 - **Manager/Admin** može vratiti: PENDING_APPROVAL → IN_PROGRESS
-
-#### Primjer predaje zadatka na odobrenje (Employee)
-
-```bash
-curl -X PUT "http://localhost:8000/api/tasks/1/status" \
-  -H "Authorization: Bearer {token}" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "PENDING_APPROVAL"}'
-```
-
-#### Primjer odobravanja zadatka (Manager/Admin)
-
-```bash
-curl -X PUT "http://localhost:8000/api/tasks/1/status" \
-  -H "Authorization: Bearer {token}" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "COMPLETED"}'
-```
-
-**Napomena:** Manager može staviti COMPLETED samo ako je zadatak u statusu PENDING_APPROVAL.
+-**Napomena:** Manager može staviti COMPLETED samo ako je zadatak u statusu PENDING_APPROVAL.
 
 ---
 
