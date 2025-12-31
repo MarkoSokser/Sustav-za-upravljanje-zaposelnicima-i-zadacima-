@@ -7,7 +7,7 @@ const AuditLogs = () => {
   const { hasPermission } = useAuth();
   const [auditLogs, setAuditLogs] = useState([]);
   const [loginEvents, setLoginEvents] = useState([]);
-  const [activeTab, setActiveTab] = useState('audit'); // 'audit' or 'login'
+  const [activeTab, setActiveTab] = useState('audit'); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -113,13 +113,13 @@ const AuditLogs = () => {
           className={`tab ${activeTab === 'audit' ? 'active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
-          📝 Audit Logovi ({auditLogs.length})
+          📝 Audit logovi ({auditLogs.length})
         </button>
         <button 
           className={`tab ${activeTab === 'login' ? 'active' : ''}`}
           onClick={() => setActiveTab('login')}
         >
-          🔑 Login Eventi ({loginEvents.length})
+          🔑 Login eventi ({loginEvents.length})
         </button>
       </div>
 

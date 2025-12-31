@@ -93,15 +93,7 @@ const Login = () => {
           </button>
         </form>
 
-        <div className="demo-credentials">
-          <h3>Demo pristupni podaci:</h3>
-          <p><strong>Admin:</strong> admin / Admin123!</p>
-          <p><strong>Manager:</strong> ivan_manager / IvanM2024!</p>
-          <p><strong>Employee:</strong> marko_dev / Marko2024!</p>
-          <p style={{fontSize: '12px', color: '#999', marginTop: '10px'}}>
-            Svaki korisnik ima svoju jedinstvenu lozinku
-          </p>
-        </div>
+        
       </div>
     </div>
   );

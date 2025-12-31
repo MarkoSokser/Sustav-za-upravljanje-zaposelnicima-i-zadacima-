@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Base API URL - promijeni ako backend radi na drugom portu
+// Base API URL 
 const API_BASE_URL = 'http://localhost:8000/api';
 
 // Kreiraj axios instancu
@@ -166,14 +166,14 @@ export const rolesAPI = {
   getUserRoles: (userId) => 
     api.get(`/roles/user/${userId}`),
   
-  // Role Permissions (permisije uloge)
+  
   addPermissionToRole: (roleId, permissionCode) => 
     api.post(`/roles/${roleId}/permissions/${permissionCode}`),
   
   removePermissionFromRole: (roleId, permissionCode) => 
     api.delete(`/roles/${roleId}/permissions/${permissionCode}`),
   
-  // User Permissions (direktna dodjela)
+ 
   getUserDirectPermissions: (userId) => 
     api.get(`/roles/users/${userId}/permissions`),
   

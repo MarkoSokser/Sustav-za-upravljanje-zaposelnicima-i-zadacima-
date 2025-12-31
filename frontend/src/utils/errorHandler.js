@@ -64,7 +64,6 @@ export const formatErrorMessage = (error, defaultMessage = 'Operacija nije uspje
   }
   
   // Ako nije prepoznata greška, vrati generičku poruku
-  // (ne prikazuj sirovu SQL grešku korisniku)
   console.warn('Neprepoznata greška:', detailStr);
   return defaultMessage;
 };

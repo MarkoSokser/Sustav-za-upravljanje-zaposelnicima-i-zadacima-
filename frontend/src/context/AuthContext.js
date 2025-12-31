@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       
-      // Opciono: Validiraj token sa serverom
+      // Validiraj token sa serverom
       authAPI.getCurrentUser()
         .then(response => {
           setUser(response.data);
