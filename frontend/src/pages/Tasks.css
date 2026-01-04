@@ -177,3 +177,61 @@
   border-top: 1px solid #e0e0e0;
 }
 
+/* ==================== CONFIRM DELETE MODAL ==================== */
+.confirm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 90%;
+  overflow: hidden;
+}
+
+.confirm-modal-header {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  padding: 15px 20px;
+}
+
+.confirm-modal-header h3 {
+  margin: 0;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.confirm-modal-body {
+  padding: 25px 20px;
+  text-align: center;
+}
+
+.confirm-modal-body p {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 15px;
+}
+
+.confirm-modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  gap: 10px;
+  padding: 15px 20px;
+  background: #f5f5f5;
+  justify-content: flex-end;
+}
+

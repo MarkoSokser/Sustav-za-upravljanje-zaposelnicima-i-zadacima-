@@ -26,6 +26,10 @@ const Tasks = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
 
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+
   // Ref za automatsko skrolanje do modala
   const modalRef = useRef(null);
 
@@ -180,19 +184,25 @@ const Tasks = () => {
     }
   };
 
-  const handleDelete = async (taskId) => {
-    if (!window.confirm('Jeste li sigurni da želite obrisati ovaj zadatak?')) {
-      return;
-    }
+  const handleDeleteClick = (task) => {
+    setTaskToDelete(task);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!taskToDelete) return;
 
     try {
-      await tasksAPI.delete(taskId);
+      await tasksAPI.delete(taskToDelete.task_id);
       setSuccess('Zadatak uspješno obrisan');
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Task delete error:', error);
       setError(formatErrorMessage(error));
+    } finally {
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
   };
 
@@ -442,7 +452,7 @@ const Tasks = () => {
                     {canDelete && (
                       <button 
                         className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(task.task_id)}
+                        onClick={() => handleDeleteClick(task)}
                       >
                         Obriši
                       </button>
@@ -550,6 +560,35 @@ const Tasks = () => {
           task={taskDetails} 
           onClose={() => setShowDetailsModal(false)} 
         />
+      )}
+
+      {/* Modal za potvrdu brisanja */}
+      {showDeleteModal && (
+        <div className="confirm-modal-overlay">
+          <div className="confirm-modal">
+            <div className="confirm-modal-header">
+              <h3>Potvrda brisanja</h3>
+            </div>
+            <div className="confirm-modal-body">
+              <p>Jeste li sigurni da želite obrisati zadatak:</p>
+              <p><strong>"{taskToDelete?.title}"</strong></p>
+            </div>
+            <div className="confirm-modal-actions">
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => { setShowDeleteModal(false); setTaskToDelete(null); }}
+              >
+                Odustani
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={handleDeleteConfirm}
+              >
+                Obriši
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
