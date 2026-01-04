@@ -4,6 +4,7 @@
 
 Sustav za upravljanje korisnicima, zadacima i pravima pristupa s RBAC modelom.
 
+📁 **Instalacijske skripte:** [`setup/`](setup/)
 
 ---
 
@@ -17,76 +18,86 @@ Prije pokretanja instalacijskih skripti, morate imati instalirano:
 
 ---
 
-## Instalacija
+## Automatska instalacija
 
-### Windows (PowerShell) - PREPORUČENO
+### Korak 1: Pokrenite instalacijsku skriptu
+
+**PowerShell (preporučeno):**
 ```powershell
-# Iz root foldera projekta:
 .\setup\install.ps1
 ```
 
-### Windows (Command Prompt)
+**Command Prompt:**
 ```batch
-# Iz root foldera projekta:
 setup\install.bat
 ```
 
-### Napredne opcije (PowerShell)
-```powershell
-# Preskoči bazu (ako već postoji)
-.\setup\install.ps1 -SkipDatabase
+### Korak 2: Pokrenite aplikaciju
 
-# Preskoči backend (npr. za frontend developere)
-.\setup\install.ps1 -SkipBackend
-
-# Koristi custom PostgreSQL postavke
-.\setup\install.ps1 -PostgresUser "myuser" -PostgresHost "192.168.1.100"
-```
-
----
-
-## Pokretanje
-
-### PowerShell
+**PowerShell:**
 ```powershell
 .\setup\start.ps1
-
-# Samo backend
-.\setup\start.ps1 -BackendOnly
-
-# Samo frontend
-.\setup\start.ps1 -FrontendOnly
 ```
 
-### Command Prompt
+**Command Prompt:**
 ```batch
 setup\start.bat
 ```
 
+### Korak 3: Otvorite aplikaciju
+
+- **Aplikacija:** http://localhost:3000
+- **API Docs:** http://localhost:8000/docs
+
 ---
 
-## Što skripte rade?
+## Ručna instalacija (ako automatska ne uspije)
 
-### install.ps1 / install.bat
+### 1. Kreiranje baze podataka
 
-1. **Provjera preduvjeta** - PostgreSQL, Python, Node.js, npm
-2. **Kreiranje baze podataka** - `interni_sustav`
-3. **Izvršavanje SQL skripti**:
-   - `01_schema.sql` - Kreiranje tablica i tipova
-   - `02_seed_data.sql` - Početni podaci (korisnici, uloge)
-   - `03_functions_procedures.sql` - Funkcije, procedure, triggeri
-4. **Backend setup**:
-   - Kreiranje Python virtual environment
-   - Instaliranje paketa iz `requirements.txt`
-   - Kreiranje `.env` datoteke
-5. **Frontend setup**:
-   - Instaliranje npm paketa
+```powershell
+# Otvorite psql terminal
+psql -U postgres
 
-### start.ps1 / start.bat
+# U psql terminalu izvršite:
+CREATE DATABASE interni_sustav;
+\c interni_sustav
+\i database/01_schema.sql
+\i database/02_seed_data.sql
+\i database/03_functions_procedures.sql
+\q
+```
 
-1. Pokreće backend server u novom terminalu (port 8000)
-2. Čeka 3 sekunde
-3. Pokreće frontend server u novom terminalu (port 3000)
+### 2. Postavljanje Backend-a
+
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. Postavljanje Frontend-a
+
+```powershell
+cd frontend
+npm install
+```
+
+### 4. Pokretanje (potrebna 2 terminala)
+
+**Terminal 1 - Backend:**
+```powershell
+cd backend
+.\venv\Scripts\activate
+python -m uvicorn app.main:app --reload
+```
+
+**Terminal 2 - Frontend:**
+```powershell
+cd frontend
+npm start
+```
 
 ---
 
@@ -99,14 +110,6 @@ setup\start.bat
 | **EMPLOYEE** | marko_dev | Marko2024! |
 
 Detaljni pristupni podaci: [`PRISTUPNI_PODACI.md`](PRISTUPNI_PODACI.md)
-
----
-
-## Linkovi
-
-- **Aplikacija:** http://localhost:3000
-- **API Docs:** http://localhost:8000/docs
-- **Backend:** http://localhost:8000
 
 ---
 
