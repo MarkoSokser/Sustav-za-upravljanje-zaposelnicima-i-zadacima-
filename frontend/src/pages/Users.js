@@ -189,6 +189,32 @@ const Users = () => {
     }
   };
 
+  const handleAddToTeam = async (userId) => {
+    try {
+      await usersAPI.addToTeam(userId);
+      setSuccess('Korisnik uspješno dodan u vaš tim');
+      loadUsers();
+      loadTeam();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Add to team error:', error);
+      setError(formatErrorMessage(error, 'Greška pri dodavanju u tim.'));
+    }
+  };
+
+  const handleRemoveFromTeam = async (userId) => {
+    try {
+      await usersAPI.removeFromTeam(userId);
+      setSuccess('Korisnik uspješno uklonjen iz tima');
+      loadUsers();
+      loadTeam();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Remove from team error:', error);
+      setError(formatErrorMessage(error, 'Greška pri uklanjanju iz tima.'));
+    }
+  };
+
   if (loading) {
     return <div className="loading">Učitavanje...</div>;
   }
@@ -297,6 +323,28 @@ const Users = () => {
                         onClick={() => handleDelete(user.user_id)}
                       >
                         Obriši
+                      </button>
+                    )}
+                    {/* Gumb za dodavanje u tim - samo za managere u "Svi korisnici" pogledu */}
+                    {isManager() && viewMode === 'all' && 
+                     user.user_id !== currentUser?.user_id && 
+                     user.manager_id !== currentUser?.user_id && (
+                      <button 
+                        className="btn btn-info btn-sm"
+                        onClick={() => handleAddToTeam(user.user_id)}
+                        title="Dodaj ovog korisnika u svoj tim"
+                      >
+                        + Moj tim
+                      </button>
+                    )}
+                    {/* Gumb za uklanjanje iz tima - samo u pogledu tima */}
+                    {isManager() && viewMode === 'team' && (
+                      <button 
+                        className="btn btn-warning btn-sm"
+                        onClick={() => handleRemoveFromTeam(user.user_id)}
+                        title="Ukloni iz tima"
+                      >
+                        Ukloni
                       </button>
                     )}
                   </div>
