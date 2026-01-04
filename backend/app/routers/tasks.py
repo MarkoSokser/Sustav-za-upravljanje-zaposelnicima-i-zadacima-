@@ -1,0 +1,609 @@
+"""
+Tasks Router - Upravljanje zadacima
+CRUD operacije, dodjela, promjena statusa
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import List, Optional
+
+from ..database import get_db_dependency
+from ..auth import (
+    get_current_active_user, require_permission, check_permission,
+    is_manager_of_user
+)
+from ..schemas import (
+    TaskCreate, TaskUpdate, TaskResponse, TaskDetails,
+    TaskStatusUpdate, TaskAssignment, TaskStatistics,
+    MessageResponse, TaskStatus, TaskPriority
+)
+
+
+router = APIRouter(prefix="/tasks", tags=["Zadaci"])
+
+
+@router.get("", response_model=List[TaskDetails], summary="Dohvati sve zadatke")
+async def get_all_tasks(
+    status_filter: Optional[TaskStatus] = Query(None, alias="status"),
+    priority: Optional[TaskPriority] = Query(None),
+    assigned_to: Optional[int] = Query(None),
+    created_by: Optional[int] = Query(None),
+    current_user: dict = Depends(require_permission("TASK_READ_ALL")),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Dohvaca sve zadatke s opcijama filtriranja.
+    
+    Koristi PostgreSQL view:
+    - v_tasks_details
+    
+    Potrebna permisija: TASK_READ_ALL
+    """
+    query = "SELECT * FROM v_tasks_details WHERE 1=1"
+    params = []
+    
+    if status_filter:
+        query += " AND status = %s"
+        params.append(status_filter.value)
+    
+    if priority:
+        query += " AND priority = %s"
+        params.append(priority.value)
+    
+    if assigned_to:
+        query += " AND assignee_id = %s"
+        params.append(assigned_to)
+    
+    if created_by:
+        query += " AND creator_id = %s"
+        params.append(created_by)
+    
+    query += " ORDER BY priority DESC, due_date NULLS LAST"
+    
+    with conn.cursor() as cur:
+        cur.execute(query, params)
+        tasks = cur.fetchall()
+    
+    result = []
+    for task in tasks:
+        result.append(TaskDetails(
+            task_id=task['task_id'],
+            title=task['title'],
+            description=task['description'],
+            status=task['status'],
+            priority=task['priority'],
+            due_date=task['due_date'],
+            created_by=task['creator_id'],
+            assigned_to=task['assignee_id'],
+            created_at=task['created_at'],
+            updated_at=task['updated_at'],
+            completed_at=task['completed_at'],
+            creator_id=task['creator_id'],
+            creator_username=task['creator_username'],
+            creator_name=task['creator_name'],
+            assignee_id=task['assignee_id'],
+            assignee_username=task['assignee_username'],
+            assignee_name=task['assignee_name'],
+            assignee_ids=task.get('assignee_ids'),
+            assignee_names=task.get('assignee_names'),
+            due_status=task['due_status'],
+            is_overdue=task['due_status'] == 'OVERDUE' if task['due_status'] else False
+        ))
+    
+    return result
+
+
+@router.get("/my", response_model=List[TaskDetails], summary="Moji zadaci")
+async def get_my_tasks(
+    status_filter: Optional[TaskStatus] = Query(None, alias="status"),
+    include_created: bool = Query(False, description="Ukljuci i zadatke koje sam kreirao"),
+    current_user: dict = Depends(get_current_active_user),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Dohvaca zadatke trenutnog korisnika.
+    
+    Koristi PostgreSQL funkciju:
+    - get_user_tasks()
+    """
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT * FROM get_user_tasks(%s, %s, %s)
+        """, (
+            current_user['user_id'],
+            status_filter.value if status_filter else None,
+            include_created
+        ))
+        tasks = cur.fetchall()
+    
+    result = []
+    for task in tasks:
+        # Izračunaj is_overdue - None vrijednost treba pretvoriti u False
+        is_overdue_val = task.get('is_overdue')
+        if is_overdue_val is None:
+            # Izračunaj ručno ako nije u rezultatu
+            due_status = task.get('due_status')
+            is_overdue_val = due_status == 'OVERDUE' if due_status else False
+        
+        result.append(TaskDetails(
+            task_id=task['task_id'],
+            title=task['title'],
+            description=task['description'],
+            status=task['status'],
+            priority=task['priority'],
+            due_date=task['due_date'],
+            created_by=task.get('creator_id', 0),
+            assigned_to=task.get('assignee_id'),
+            created_at=task.get('created_at'),
+            updated_at=task.get('updated_at'),
+            completed_at=task.get('completed_at'),
+            creator_id=task.get('creator_id', 0),
+            creator_username=task.get('creator_username', ''),
+            creator_name=task['creator_name'],
+            assignee_id=task.get('assignee_id'),
+            assignee_username=task.get('assignee_username'),
+            assignee_name=task.get('assignee_name'),
+            assignee_ids=task.get('assignee_ids'),
+            assignee_names=task.get('assignee_names'),
+            due_status=task.get('due_status'),
+            is_overdue=is_overdue_val
+        ))
+    
+    return result
+
+
+@router.get("/my/statistics", response_model=TaskStatistics,
+            summary="Moja statistika zadataka")
+async def get_my_task_statistics(
+    current_user: dict = Depends(get_current_active_user),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Dohvaca statistiku zadataka trenutnog korisnika.
+    
+    Koristi PostgreSQL funkciju:
+    - get_task_statistics()
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM get_task_statistics(%s)", 
+                   (current_user['user_id'],))
+        stats = cur.fetchone()
+    
+    if not stats:
+        return TaskStatistics(
+            total_tasks=0, completed_tasks=0, in_progress_tasks=0,
+            overdue_tasks=0, completion_rate=0.0
+        )
+    
+    return TaskStatistics(**stats)
+
+
+@router.get("/{task_id}", response_model=TaskDetails, summary="Dohvati zadatak")
+async def get_task(
+    task_id: int,
+    current_user: dict = Depends(get_current_active_user),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Dohvaca pojedinacan zadatak po ID-u.
+    
+    Koristi PostgreSQL view:
+    - v_tasks_details
+    """
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT * FROM v_tasks_details 
+            WHERE task_id = %s
+        """, (task_id,))
+        task = cur.fetchone()
+    
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Zadatak nije pronadjen"
+        )
+    
+    # Provjera pristupa - uključi i višestruke assignee-e
+    assignee_ids = task.get('assignee_ids') or []
+    can_view = (
+        task['assignee_id'] == current_user['user_id'] or
+        current_user['user_id'] in assignee_ids or
+        task['creator_id'] == current_user['user_id'] or
+        check_permission(conn, current_user['user_id'], 'TASK_READ_ALL')
+    )
+    
+    if not can_view:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Nemate pristup ovom zadatku"
+        )
+    
+    return TaskDetails(
+        task_id=task['task_id'],
+        title=task['title'],
+        description=task['description'],
+        status=task['status'],
+        priority=task['priority'],
+        due_date=task['due_date'],
+        created_by=task['creator_id'],
+        assigned_to=task['assignee_id'],
+        created_at=task['created_at'],
+        updated_at=task['updated_at'],
+        completed_at=task['completed_at'],
+        creator_id=task['creator_id'],
+        creator_username=task['creator_username'],
+        creator_name=task['creator_name'],
+        assignee_id=task['assignee_id'],
+        assignee_username=task['assignee_username'],
+        assignee_name=task['assignee_name'],
+        assignee_ids=task.get('assignee_ids'),
+        assignee_names=task.get('assignee_names'),
+        due_status=task['due_status'],
+        is_overdue=task['due_status'] == 'OVERDUE' if task['due_status'] else False
+    )
+
+
+@router.post("", response_model=MessageResponse, summary="Kreiraj zadatak")
+async def create_task(
+    task_data: TaskCreate,
+    current_user: dict = Depends(require_permission("TASK_CREATE")),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Kreira novi zadatak.
+    
+    Koristi PostgreSQL proceduru:
+    - create_task()
+    
+    Podržava višestruku dodjelu putem assigned_to_ids polja.
+    
+    Potrebna permisija: TASK_CREATE
+    """
+    try:
+        with conn.cursor() as cur:
+            # Odredi assignee - prioritet ima lista, zatim pojedinačni
+            first_assignee = None
+            if task_data.assigned_to_ids and len(task_data.assigned_to_ids) > 0:
+                first_assignee = task_data.assigned_to_ids[0]
+            elif task_data.assigned_to:
+                first_assignee = task_data.assigned_to
+            
+            cur.execute("""
+                CALL create_task(%s, %s, %s, %s, %s, %s, NULL)
+            """, (
+                task_data.title,
+                task_data.description,
+                task_data.priority.value,
+                task_data.due_date,
+                current_user['user_id'],
+                first_assignee
+            ))
+            
+            # Dohvati ID novog zadatka
+            cur.execute("""
+                SELECT task_id FROM tasks 
+                WHERE title = %s AND created_by = %s
+                ORDER BY created_at DESC LIMIT 1
+            """, (task_data.title, current_user['user_id']))
+            new_task = cur.fetchone()
+            
+            # Ako ima više assignee-a, dodaj ih u task_assignees tablicu
+            if new_task and task_data.assigned_to_ids and len(task_data.assigned_to_ids) > 0:
+                for user_id in task_data.assigned_to_ids:
+                    cur.execute("""
+                        INSERT INTO task_assignees (task_id, user_id, assigned_by)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (task_id, user_id) DO NOTHING
+                    """, (new_task['task_id'], user_id, current_user['user_id']))
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    task_id = new_task['task_id'] if new_task else "unknown"
+    return MessageResponse(
+        message=f"Zadatak '{task_data.title}' uspjesno kreiran s ID {task_id}",
+        success=True
+    )
+
+
+@router.put("/{task_id}/status", response_model=MessageResponse,
+            summary="Promijeni status zadatka")
+async def update_task_status(
+    task_id: int,
+    status_data: TaskStatusUpdate,
+    current_user: dict = Depends(get_current_active_user),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Mijenja status zadatka.
+    
+    Koristi PostgreSQL proceduru:
+    - update_task_status()
+    
+    Pravila:
+    - Korisnik mora biti assignee, kreator, ili imati TASK_UPDATE_ANY permisiju
+    - Zavrseni zadaci se ne mogu ponovo otvoriti
+    - Otkazani zadaci se ne mogu mijenjati
+    - NOVO: Employee može staviti samo PENDING_APPROVAL (ne COMPLETED direktno)
+    - NOVO: Samo Manager/Admin mogu potvrditi COMPLETED
+    """
+    new_status = status_data.status.value
+    
+    # Dohvati trenutni status zadatka i provjeri ulogu korisnika
+    with conn.cursor() as cur:
+        # Dohvati trenutni status
+        cur.execute("SELECT status FROM tasks WHERE task_id = %s", (task_id,))
+        task_result = cur.fetchone()
+        if not task_result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Zadatak nije pronađen"
+            )
+        current_status = task_result['status']
+        
+        # Provjeri je li korisnik manager ili admin
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1 FROM user_roles ur
+                JOIN roles r ON ur.role_id = r.role_id
+                WHERE ur.user_id = %s AND r.name IN ('ADMIN', 'MANAGER')
+            ) AS is_manager_or_admin
+        """, (current_user['user_id'],))
+        result = cur.fetchone()
+        is_manager_or_admin = result['is_manager_or_admin'] if result else False
+    
+    # Employee ne može direktno staviti COMPLETED
+    if new_status == 'COMPLETED' and not is_manager_or_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Samo manager ili admin mogu završiti zadatak. Koristite status 'Čeka odobrenje' (PENDING_APPROVAL)."
+        )
+    
+    # Manager/Admin mogu staviti COMPLETED samo ako je zadatak u PENDING_APPROVAL
+    # (osim ako je CANCELLED - to može uvijek)
+    if new_status == 'COMPLETED' and is_manager_or_admin:
+        if current_status != 'PENDING_APPROVAL':
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Zadatak mora biti u statusu 'Čeka odobrenje' da bi se mogao završiti. Trenutni status: {current_status}"
+            )
+    
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CALL update_task_status(%s, %s, %s)
+            """, (task_id, new_status, current_user['user_id']))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    return MessageResponse(
+        message=f"Status zadatka ID {task_id} promijenjen u {new_status}",
+        success=True
+    )
+
+
+@router.put("/{task_id}/assign", response_model=MessageResponse,
+            summary="Dodijeli zadatak")
+async def assign_task(
+    task_id: int,
+    assignment: TaskAssignment,
+    current_user: dict = Depends(require_permission("TASK_ASSIGN")),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Dodjeljuje zadatak jednom ili više korisnika.
+    
+    Koristi PostgreSQL tablicu task_assignees za višestruku dodjelu.
+    
+    Potrebna permisija: TASK_ASSIGN
+    """
+    try:
+        # Odredi listu korisnika za dodjelu
+        user_ids = []
+        if assignment.assignee_ids:
+            user_ids = assignment.assignee_ids
+        elif assignment.assignee_id:
+            user_ids = [assignment.assignee_id]
+        
+        if not user_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Morate odabrati barem jednog korisnika"
+            )
+        
+        with conn.cursor() as cur:
+            # Provjeri da zadatak postoji
+            cur.execute("SELECT task_id FROM tasks WHERE task_id = %s", (task_id,))
+            if not cur.fetchone():
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Zadatak nije pronađen"
+                )
+            
+            # Dodaj svakog korisnika
+            for user_id in user_ids:
+                # Provjeri da korisnik postoji i aktivan je
+                cur.execute("""
+                    SELECT user_id FROM users WHERE user_id = %s AND is_active = TRUE
+                """, (user_id,))
+                if not cur.fetchone():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Korisnik s ID {user_id} ne postoji ili nije aktivan"
+                    )
+                
+                # Dodaj dodjelu
+                cur.execute("""
+                    INSERT INTO task_assignees (task_id, user_id, assigned_by)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (task_id, user_id) DO NOTHING
+                """, (task_id, user_id, current_user['user_id']))
+            
+            # Ažuriraj i staru kolonu za backward compatibility (prvi korisnik)
+            cur.execute("""
+                UPDATE tasks 
+                SET assigned_to = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE task_id = %s
+            """, (user_ids[0], task_id))
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    return MessageResponse(
+        message=f"Zadatak ID {task_id} dodijeljen korisnicima: {user_ids}",
+        success=True
+    )
+
+
+@router.put("/{task_id}", response_model=MessageResponse, summary="Azuriraj zadatak")
+async def update_task(
+    task_id: int,
+    task_data: TaskUpdate,
+    current_user: dict = Depends(get_current_active_user),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Azurira podatke zadatka (naslov, opis, prioritet, rok).
+    
+    Koristi direktni SQL UPDATE s provjerom permisija.
+    """
+    # Provjera da zadatak postoji i provjera pristupa
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT task_id, created_by, assigned_to, status
+            FROM tasks WHERE task_id = %s
+        """, (task_id,))
+        task = cur.fetchone()
+    
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Zadatak nije pronadjen"
+        )
+    
+    # Provjera permisija
+    can_update = (
+        task['created_by'] == current_user['user_id'] or
+        task['assigned_to'] == current_user['user_id'] or
+        check_permission(conn, current_user['user_id'], 'TASK_UPDATE_ANY')
+    )
+    
+    if not can_update:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Nemate dozvolu za azuriranje ovog zadatka"
+        )
+    
+    if task['status'] in ('COMPLETED', 'CANCELLED'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ne mozete azurirati zavrsen ili otkaazan zadatak"
+        )
+    
+    # Azuriraj
+    try:
+        with conn.cursor() as cur:
+            update_parts = []
+            params = []
+            
+            if task_data.title is not None:
+                update_parts.append("title = %s")
+                params.append(task_data.title)
+            
+            if task_data.description is not None:
+                update_parts.append("description = %s")
+                params.append(task_data.description)
+            
+            if task_data.priority is not None:
+                update_parts.append("priority = %s")
+                params.append(task_data.priority.value)
+            
+            if task_data.due_date is not None:
+                update_parts.append("due_date = %s")
+                params.append(task_data.due_date)
+            
+            # Višestruka dodjela - ako je proslijeđena lista
+            if task_data.assigned_to_ids is not None:
+                # Obriši postojeće dodjele
+                cur.execute("DELETE FROM task_assignees WHERE task_id = %s", (task_id,))
+                
+                # Dodaj nove dodjele
+                for user_id in task_data.assigned_to_ids:
+                    cur.execute("""
+                        INSERT INTO task_assignees (task_id, user_id, assigned_by)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (task_id, user_id) DO NOTHING
+                    """, (task_id, user_id, current_user['user_id']))
+                
+                # Ažuriraj staru kolonu za backward compatibility
+                if task_data.assigned_to_ids:
+                    update_parts.append("assigned_to = %s")
+                    params.append(task_data.assigned_to_ids[0])
+                else:
+                    update_parts.append("assigned_to = NULL")
+            elif task_data.assigned_to is not None:
+                update_parts.append("assigned_to = %s")
+                params.append(task_data.assigned_to)
+                # Također dodaj u novu tablicu
+                cur.execute("""
+                    INSERT INTO task_assignees (task_id, user_id, assigned_by)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (task_id, user_id) DO NOTHING
+                """, (task_id, task_data.assigned_to, current_user['user_id']))
+            
+            if update_parts:
+                update_parts.append("updated_at = CURRENT_TIMESTAMP")
+                params.append(task_id)
+                
+                cur.execute(f"""
+                    UPDATE tasks SET {', '.join(update_parts)}
+                    WHERE task_id = %s
+                """, params)
+                
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    return MessageResponse(
+        message=f"Zadatak ID {task_id} uspjesno azuriran",
+        success=True
+    )
+
+
+@router.delete("/{task_id}", response_model=MessageResponse, summary="Obrisi zadatak")
+async def delete_task(
+    task_id: int,
+    current_user: dict = Depends(require_permission("TASK_DELETE")),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Brise zadatak iz sustava.
+    
+    Potrebna permisija: TASK_DELETE
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT task_id FROM tasks WHERE task_id = %s", (task_id,))
+        if not cur.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Zadatak nije pronadjen"
+            )
+        
+        cur.execute("DELETE FROM tasks WHERE task_id = %s", (task_id,))
+    
+    return MessageResponse(
+        message=f"Zadatak ID {task_id} uspjesno obrisan",
+        success=True
+    )

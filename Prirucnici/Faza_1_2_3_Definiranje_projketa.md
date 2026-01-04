@@ -50,20 +50,24 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 16. Administrator može dodjeljivati uloge korisnicima.
 17. Administrator može uklanjati uloge korisnicima.
 18. Administrator može definirati prava pristupa za svaku ulogu.
-19. Sustav mora na temelju prava pristupa ograničiti izvršavanje radnji.
-20. Sustav mora na temelju prava pristupa prilagoditi prikaz funkcionalnosti.
+19. **Administrator može dodjeljivati/oduzimati direktne permisije pojedinačnim korisnicima.**
+20. Sustav mora na temelju prava pristupa ograničiti izvršavanje radnji.
+21. Sustav mora na temelju prava pristupa prilagoditi prikaz funkcionalnosti.
+22. **Sustav mora kombinirati permisije iz uloga i direktnih dodjela (hibridni RBAC).**
 
 ### Upravljanje zadacima
 21. Manager može kreirati nove zadatke.
-22. Manager može dodijeliti zadatak zaposleniku iz svog tima.
+22. Manager može dodijeliti zadatak jednom ili više zaposlenika iz svog tima.
 23. Manager može uređivati zadatke koje je kreirao.
 24. Manager može pregledati sve zadatke unutar svog tima.
 25. Manager može brisati zadatke koje je kreirao.
 26. Employee može pregledati vlastite zadatke.
-27. Employee može ažurirati status vlastitih zadataka.
-28. Administrator može pregledati sve zadatke u sustavu.
-29. Administrator može uređivati sve zadatke u sustavu.
-30. Administrator može brisati sve zadatke u sustavu.
+27. **Employee može predložiti završetak zadatka (status PENDING_APPROVAL).**
+28. **Manager/Admin može odobriti završetak zadatka (status COMPLETED).**
+29. Administrator može pregledati sve zadatke u sustavu.
+30. Administrator može uređivati sve zadatke u sustavu.
+31. Administrator može brisati sve zadatke u sustavu.
+32. **Zadatak može biti dodijeljen većem broju korisnika istovremeno (timski rad).**
 
 ### Meta-podaci i audit
 31. Sustav mora bilježiti sve prijave korisnika (vrijeme, IP adresa, uspješnost).
@@ -86,7 +90,7 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 ### Pouzdanost
 - Integritet podataka osigurava se ograničenjima baze podataka.
 - Sve kritične operacije izvršavaju se unutar transakcija.
-- Sustav mora biti dostupan 99% vremena.
+
 
 ### Održivost
 - Sustav je modularan i lako proširiv.
@@ -98,9 +102,7 @@ Ovaj skup uloga predstavlja realističan i često korišten model u poslovnim in
 - Audit zapisi uključuju podatke o korisniku koji je izvršio promjenu.
 - Audit zapisi su nepromjenjivi (samo unos, bez izmjena ili brisanja).
 
-### Performanse
-- Vrijeme odgovora API-ja ne smije prelaziti 500ms za standardne operacije.
-- Sustav mora podržavati najmanje 100 istovremenih korisnika.
+
 
 ---
 
@@ -115,9 +117,19 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 | **Permission** | Pojedinačno pravo pristupa |
 | **UserRole** | Veza korisnika i uloge (M:N) |
 | **RolePermission** | Veza uloge i prava (M:N) |
+| **UserPermission** | Direktna dodjela permisije korisniku (hibridni RBAC) |
 | **Task** | Zadatak dodijeljen korisniku |
+| **TaskAssignee** | Veza zadatka i korisnika za višestruku dodjelu (M:N) |
 | **LoginEvent** | Evidencija prijava u sustav |
 | **AuditLog** | Evidencija promjena nad podacima |
+
+### Tijek statusa zadataka
+```
+TODO → IN_PROGRESS → PENDING_APPROVAL → COMPLETED
+                  ↘ CANCELLED
+```
+- **PENDING_APPROVAL**: Zaposlenik predlaže završetak
+- **COMPLETED**: Manager/Admin odobrava završetak
 
 ---
 
@@ -171,7 +183,7 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 |------------|:-----:|:-------:|:--------:|
 | **Upravljanje korisnicima** ||||
 | USER_CREATE | ✅ | ❌ | ❌ |
-| USER_READ_ALL | ✅ | ❌ | ❌ |
+| USER_READ_ALL | ✅ | ✅ | ❌ |
 | USER_READ_TEAM | ✅ | ✅ | ❌ |
 | USER_READ_SELF | ✅ | ✅ | ✅ |
 | USER_UPDATE_ALL | ✅ | ❌ | ❌ |
@@ -187,11 +199,11 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 | **Upravljanje zadacima** ||||
 | TASK_CREATE | ✅ | ✅ | ❌ |
 | TASK_ASSIGN | ✅ | ✅ | ❌ |
-| TASK_READ_ALL | ✅ | ❌ | ❌ |
+| TASK_READ_ALL | ✅ | ✅ | ❌ |
 | TASK_READ_TEAM | ✅ | ✅ | ❌ |
-| TASK_READ_SELF | ✅ | ✅ | ✅ |
+| TASK_READ_SELF | ✅ | ❌ | ✅ |
 | TASK_UPDATE_ANY | ✅ | ✅ | ❌ |
-| TASK_UPDATE_SELF_STATUS | ✅ | ✅ | ✅ |
+| TASK_UPDATE_SELF_STATUS | ✅ | ❌ | ✅ |
 | TASK_DELETE | ✅ | ✅ | ❌ |
 | **Audit i meta-podaci** ||||
 | AUDIT_READ_ALL | ✅ | ❌ | ❌ |
@@ -205,13 +217,14 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 1. **Hijerarhija timova:** Svaki zaposlenik može imati nadređenog managera (manager_id).
 2. **Pristup podacima:** Zaposlenik može pristupiti i uređivati samo vlastite podatke i status vlastitih zadataka.
 3. **Upravljanje timom:** Manager može upravljati samo zaposlenicima koji su mu izravno podređeni.
-4. **Dodjela zadataka:** Manager može dodijeliti zadatak samo zaposlenicima iz svog tima.
-5. **Administratorske ovlasti:** Administrator ima puni pristup svim dijelovima sustava.
-6. **Audit evidencija:** Sve promjene uloga i prava pristupa bilježe se u audit log.
-7. **Prijave:** Svaka prijava korisnika (uspješna ili neuspješna) evidentira se u sustavu.
-8. **Deaktivacija:** Deaktivirani korisnici ne mogu se prijaviti u sustav.
-9. **Integritet uloga:** Uloga se ne može obrisati ako je dodijeljena nekom korisniku.
-10. **Status zadatka:** Samo dodijeljeni korisnik ili administrator može promijeniti status zadatka.
+4. **Dodjela zadataka:** Manager može dodijeliti zadatak jednom ili više zaposlenika iz svog tima.
+5. **Višestruka dodjela:** Isti zadatak može biti dodijeljen većem broju korisnika za timski rad.
+6. **Administratorske ovlasti:** Administrator ima puni pristup svim dijelovima sustava.
+7. **Audit evidencija:** Sve promjene uloga i prava pristupa bilježe se u audit log.
+8. **Prijave:** Svaka prijava korisnika (uspješna ili neuspješna) evidentira se u sustavu.
+9. **Deaktivacija:** Deaktivirani korisnici ne mogu se prijaviti u sustav.
+10. **Integritet uloga:** Uloga se ne može obrisati ako je dodijeljena nekom korisniku.
+11. **Status zadatka:** Samo dodijeljeni korisnik/korisnici ili administrator može promijeniti status zadatka.
 
 ---
 
@@ -240,48 +253,6 @@ Potpuni skup entiteta potreban za implementaciju sustava:
 - Ažuriranje statusa vlastitih zadataka
 - Pregled i uređivanje vlastitog profila
 - Pregled vlastitih prijava u sustav
-
----
-
-## 1.10 Dijagram slučajeva korištenja (Use Case)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SUSTAV ZA UPRAVLJANJE                        │
-│                ZAPOSLENICIMA I ZADACIMA                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────┐                                                   │
-│  │  ADMIN   │──── Upravljanje korisnicima                       │
-│  │          │──── Upravljanje ulogama                           │
-│  │          │──── Upravljanje pravima                           │
-│  │          │──── Pregled svih zadataka                         │
-│  │          │──── Pregled audit zapisa                          │
-│  └──────────┘                                                   │
-│                                                                 │
-│  ┌──────────┐                                                   │
-│  │ MANAGER  │──── Kreiranje zadataka                            │
-│  │          │──── Dodjela zadataka                              │
-│  │          │──── Pregled tima                                  │
-│  │          │──── Uređivanje profila                            │
-│  └──────────┘                                                   │
-│                                                                 │
-│  ┌──────────┐                                                   │
-│  │ EMPLOYEE │──── Pregled zadataka                              │
-│  │          │──── Ažuriranje statusa                            │
-│  │          │──── Uređivanje profila                            │
-│  └──────────┘                                                   │
-│                                                                 │
-│  ┌──────────────────────────────────────────────┐               │
-│  │              ZAJEDNIČKI                       │               │
-│  │  ○ Prijava u sustav                          │               │
-│  │  ○ Odjava iz sustava                         │               │
-│  │  ○ Promjena lozinke                          │               │
-│  │  ○ Pregled vlastitih prijava                 │               │
-│  └──────────────────────────────────────────────┘               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
 
 ---
 
@@ -463,7 +434,8 @@ Sustav se sastoji od sljedećih ključnih entiteta:
 | **Permission** | Glavni | Pojedinačno pravo pristupa |
 | **UserRole** | Povezni | Veza između korisnika i uloga (M:N) |
 | **RolePermission** | Povezni | Veza između uloga i prava (M:N) |
-| **Task** | Glavni | Zadatak dodijeljen zaposleniku |
+| **Task** | Glavni | Zadatak dodijeljen zaposlenicima |
+| **TaskAssignee** | Povezni | Veza između zadataka i korisnika (M:N) - višestruka dodjela |
 | **LoginEvent** | Audit | Evidencija prijava korisnika |
 | **AuditLog** | Audit | Zapis promjena nad osjetljivim podacima |
 
@@ -595,7 +567,30 @@ CREATE TYPE task_priority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT');
 
 **Napomene:**
 - `completed_at` se automatski popunjava kada status postane COMPLETED
-- `assigned_to` može biti NULL (neraspoređeni zadatak)
+- `assigned_to` čuva se za backward compatibility (prvi dodijeljeni korisnik)
+- Za višestruku dodjelu koristi se tablica `task_assignees`
+
+---
+
+### 3.4.9 TaskAssignee (NOVO)
+
+Povezni entitet koji omogućuje dodjelu jednog zadatka više korisnika.
+
+| Atribut | Tip | Ograničenja | Opis |
+|---------|-----|-------------|------|
+| `task_assignee_id` | SERIAL | PK | Jedinstveni identifikator |
+| `task_id` | INTEGER | FK → Task, NOT NULL | Referenca na zadatak |
+| `user_id` | INTEGER | FK → User, NOT NULL | Referenca na korisnika |
+| `assigned_at` | TIMESTAMP | NOT NULL, DEFAULT NOW() | Datum dodjele |
+| `assigned_by` | INTEGER | FK → User, NULL | Korisnik koji je dodijelio zadatak |
+
+**Ograničenja:**
+- UNIQUE (task_id, user_id) – isti korisnik ne može biti dodijeljen istom zadatku više puta
+- ON DELETE CASCADE za task_id i user_id
+
+**Napomene:**
+- Omogućuje rad više zaposlenika na istom zadatku
+- Koristi se kada zadatak zahtijeva timski rad
 
 ---
 
@@ -652,90 +647,144 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 ### 3.5.1 Tekstualni prikaz odnosa
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                              ER DIJAGRAM                                  │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│                         ┌───────────────┐                                │
-│                         │   Permission  │                                │
-│                         │───────────────│                                │
-│                         │ permission_id │                                │
-│                         │ code          │                                │
-│                         │ name          │                                │
-│                         │ category      │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ M                                      │
-│                                 │                                        │
-│                         ┌───────┴───────┐                                │
-│                         │RolePermission │                                │
-│                         │───────────────│                                │
-│                         │ role_id (FK)  │                                │
-│                         │ permission_id │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ M                                      │
-│                                 │                                        │
-│ ┌───────────────┐       ┌───────┴───────┐       ┌───────────────┐        │
-│ │   LoginEvent  │       │     Role      │       │   AuditLog    │        │
-│ │───────────────│       │───────────────│       │───────────────│        │
-│ │ login_event_id│       │ role_id       │       │ audit_log_id  │        │
-│ │ user_id (FK)  │       │ name          │       │ entity_name   │        │
-│ │ login_time    │       │ description   │       │ entity_id     │        │
-│ │ ip_address    │       │ is_system     │       │ action        │        │
-│ │ success       │       └───────┬───────┘       │ changed_by(FK)│        │
-│ └───────┬───────┘               │               └───────┬───────┘        │
-│         │                       │ M                     │                │
-│         │ M                     │                       │ M              │
-│         │               ┌───────┴───────┐               │                │
-│         │               │   UserRole    │               │                │
-│         │               │───────────────│               │                │
-│         │               │ user_id (FK)  │               │                │
-│         │               │ role_id (FK)  │               │                │
-│         │               │ assigned_by   │               │                │
-│         │               └───────┬───────┘               │                │
-│         │                       │ M                     │                │
-│         │                       │                       │                │
-│         │               ┌───────┴───────┐               │                │
-│         └──────────────►│     User      │◄──────────────┘                │
-│                         │───────────────│                                │
-│                         │ user_id       │◄──────┐                        │
-│                         │ username      │       │                        │
-│                         │ email         │       │ manager_id             │
-│                         │ first_name    │       │ (self-reference)       │
-│                         │ last_name     │       │                        │
-│                         │ manager_id(FK)│───────┘                        │
-│                         │ is_active     │                                │
-│                         └───────┬───────┘                                │
-│                                 │                                        │
-│                                 │ 1                                      │
-│                                 │                                        │
-│                         ┌───────┴───────┐                                │
-│                         │     Task      │                                │
-│                         │───────────────│                                │
-│                         │ task_id       │                                │
-│                         │ title         │                                │
-│                         │ status        │                                │
-│                         │ priority      │                                │
-│                         │ created_by(FK)│                                │
-│                         │ assigned_to   │                                │
-│                         │ due_date      │                                │
-│                         └───────────────┘                                │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                                ER DIJAGRAM                                        │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│                         ┌───────────────────────────┐                            │
+│                         │      Permission           │                            │
+│                         │───────────────────────────│                            │
+│                         │ permission_id  SER  PK    │                            │
+│                         │ code           VC(50)     │                            │
+│                         │ name           VC(100)    │                            │
+│                         │ description    TXT        │                            │
+│                         │ category       VC(50)     │                            │
+│                         │ created_at     TS         │                            │
+│                         └──────────┬────────────────┘                            │
+│                                    │                                             │
+│                                    │ M                                           │
+│                                    │                                             │
+│                         ┌──────────┴────────────────┐                            │
+│                         │    RolePermission         │                            │
+│                         │───────────────────────────│                            │
+│                         │ role_permission_id SER PK │                            │
+│                         │ role_id         INT  FK   │                            │
+│                         │ permission_id   INT  FK   │                            │
+│                         │ assigned_at     TS        │                            │
+│                         └──────────┬────────────────┘                            │
+│                                    │                                             │
+│                                    │ M                                           │
+│                                    │                                             │
+│ ┌───────────────────────┐  ┌───────┴────────────┐  ┌──────────────────────────┐  │
+│ │    LoginEvent         │  │       Role         │  │       AuditLog           │  │
+│ │───────────────────────│  │────────────────────│  │──────────────────────────│  │
+│ │ login_event_id SER PK │  │ role_id     SER PK │  │ audit_log_id    SER  PK  │  │
+│ │ user_id        INT FK │  │ name        VC(50) │  │ entity_name     VC(50)   │  │
+│ │ username_atmp  VC(50) │  │ description TXT    │  │ entity_id       INT      │  │
+│ │ login_time     TS     │  │ is_system   BOOL   │  │ action          ENUM     │  │
+│ │ ip_address     INET   │  │ created_at  TS     │  │ changed_by      INT  FK  │  │
+│ │ user_agent     TXT    │  │ updated_at  TS     │  │ changed_at      TS       │  │
+│ │ success        BOOL   │  └─────────┬──────────┘  │ old_value       JSON     │  │
+│ │ failure_reason VC(100)│            │             │ new_value       JSON     │  │
+│ └───────┬───────────────┘            │ M           │ ip_address      INET     │  │
+│         │                            │             └──────────┬───────────────┘  │
+│         │ M                  ┌───────┴───────┐              │                   │
+│         │                    │   UserRole    │              │ M                 │
+│         │                    │───────────────│              │                   │
+│         │                    │ user_role_id  │              │                   │
+│         │                    │         SER PK│              │                   │
+│         │                    │ user_id INT FK│              │                   │
+│         │                    │ role_id INT FK│              │                   │
+│         │                    │ assigned_at TS│              │                   │
+│         │                    │ assigned_by   │              │                   │
+│         │                    │         INT FK│              │                   │
+│         │                    └───────┬───────┘              │                   │
+│         │                            │ M                    │                   │
+│         │                            │                      │                   │
+│         │                    ┌───────┴────────────┐         │                   │
+│         └───────────────────►│       User         │◄────────┘                   │
+│                              │────────────────────│                             │
+│                              │ user_id       SER  │◄─────┐                      │
+│                              │            PK      │      │                      │
+│                              │ username    VC(50) │      │                      │
+│                              │ email       VC(100)│      │ manager_id           │
+│                              │ password_hash      │      │ (self-reference)     │
+│                              │            VC(255) │      │                      │
+│                              │ first_name  VC(50) │      │                      │
+│                              │ last_name   VC(50) │      │                      │
+│                              │ manager_id  INT FK │──────┘                      │
+│                              │ is_active   BOOL   │                             │
+│                              │ created_at  TS     │                             │
+│                              │ updated_at  TS     │                             │
+│                              └──────────┬─────────┘                             │
+│                                         │                                       │
+│                                         │ 1                                     │
+│                                         │                                       │
+│                              ┌──────────┴─────────────┐                         │
+│                              │        Task            │                         │
+│                              │────────────────────────│                         │
+│                              │ task_id       SER  PK  │                         │
+│                              │ title         VC(200)  │                         │
+│                              │ description   TXT      │                         │
+│                              │ status        ENUM     │                         │
+│                              │ priority      ENUM     │                         │
+│                              │ due_date      DT       │                         │
+│                              │ created_by    INT  FK  │                         │
+│                              │ assigned_to   INT  FK  │◄─── backward compat.    │
+│                              │ created_at    TS       │                         │
+│                              │ updated_at    TS       │                         │
+│                              │ completed_at  TS       │                         │
+│                              └──────────┬─────────────┘                         │
+│                                         │                                       │
+│                                         │ 1                                     │
+│                                         │                                       │
+│                              ┌──────────┴─────────────┐                         │
+│                              │    TaskAssignee        │  (NOVO - M:N veza)      │
+│                              │────────────────────────│                         │
+│                              │ task_assignee_id       │                         │
+│                              │              SER  PK   │                         │
+│                              │ task_id      INT  FK   │                         │
+│                              │ user_id      INT  FK   │──────► User             │
+│                              │ assigned_at  TS        │                         │
+│                              │ assigned_by  INT  FK   │                         │
+│                              └────────────────────────┘                         │
+│                                                                                  │
+│  Legenda tipova:                                                                │
+│  SER = SERIAL | INT = INTEGER | VC = VARCHAR | TXT = TEXT | BOOL = BOOLEAN     │
+│  TS = TIMESTAMP | DT = DATE | INET = IP adresa | JSON = JSONB | ENUM = tip      │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
+![ERA model](/images/ERA.png)
+*Figure 1: ERA dijagram *
+
 
 ### 3.5.2 Tablica kardinalnosti
+
+**Odnosi višeg nivoa (kroz povezne entitete):**
 
 | Odnos | Tip | Opis |
 |-------|-----|------|
 | User ↔ Role | M:N | Korisnik može imati više uloga; uloga može pripadati više korisnika (preko UserRole) |
 | Role ↔ Permission | M:N | Uloga može imati više prava; pravo može pripadati više uloga (preko RolePermission) |
-| User ↔ Task (created_by) | 1:N | Jedan korisnik može kreirati više zadataka |
-| User ↔ Task (assigned_to) | 1:N | Jednom korisniku može biti dodijeljeno više zadataka |
-| User ↔ User (manager_id) | 1:N | Jedan manager može imati više podređenih zaposlenika |
-| User ↔ LoginEvent | 1:N | Jedan korisnik ima više prijava |
-| User ↔ AuditLog | 1:N | Jedan korisnik može uzrokovati više audit zapisa |
+| Task ↔ User | M:N | Zadatak može biti dodijeljen više korisnika; korisnik može raditi na više zadataka (preko TaskAssignee) |
+
+**Direktni odnosi:**
+
+| Entitet 1 | Veza | Entitet 2 | Kardinalnost | Opis |
+|-----------|------|-----------|--------------|------|
+| **User** | manager_id | **User** | 1:N | Jedan manager (User) može imati više podređenih zaposlenika (User) |
+| **User** | created_by | **Task** | 1:N | Jedan korisnik može kreirati više zadataka |
+| **User** | assigned_to | **Task** | 1:N | Jednom korisniku može biti dodijeljeno više zadataka (backward compat.) |
+| **Task** | task_id | **TaskAssignee** | 1:N | Jedan zadatak može imati više dodijeljenih korisnika |
+| **User** | user_id | **TaskAssignee** | 1:N | Jedan korisnik može biti dodijeljen na više zadataka |
+| **User** | user_id | **LoginEvent** | 1:N | Jedan korisnik može imati više evidencija prijava |
+| **User** | changed_by | **AuditLog** | 1:N | Jedan korisnik može biti odgovoran za više audit zapisa |
+| **User** | assigned_by | **UserRole** | 1:N | Jedan korisnik može dodijeliti uloge više puta |
+| **User** | user_id | **UserRole** | 1:N | Jednom korisniku može biti dodijeljeno više uloga (preko više zapisa) |
+| **Role** | role_id | **UserRole** | 1:N | Jedna uloga može biti dodijeljena više korisnika (preko više zapisa) |
+| **Role** | role_id | **RolePermission** | 1:N | Jedna uloga može imati više prava (preko više zapisa) |
+| **Permission** | permission_id | **RolePermission** | 1:N | Jedno pravo može pripadati više uloga (preko više zapisa) |
 
 ---
 
@@ -755,6 +804,9 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 | RolePermission | permission_id | Permission(permission_id) | CASCADE |
 | Task | created_by | User(user_id) | RESTRICT |
 | Task | assigned_to | User(user_id) | SET NULL |
+| **TaskAssignee** | **task_id** | **Task(task_id)** | **CASCADE** |
+| **TaskAssignee** | **user_id** | **User(user_id)** | **CASCADE** |
+| **TaskAssignee** | **assigned_by** | **User(user_id)** | **SET NULL** |
 | LoginEvent | user_id | User(user_id) | SET NULL |
 | AuditLog | changed_by | User(user_id) | SET NULL |
 
@@ -764,6 +816,7 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 - Permission: code
 - UserRole: (user_id, role_id)
 - RolePermission: (role_id, permission_id)
+- **TaskAssignee: (task_id, user_id)**
 
 ### CHECK ograničenja
 - User.email mora sadržavati '@'
@@ -782,6 +835,8 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 | Task | idx_task_status | Filtriranje po statusu |
 | Task | idx_task_assigned | Zadaci dodijeljeni korisniku |
 | Task | idx_task_created_by | Zadaci koje je korisnik kreirao |
+| **TaskAssignee** | **idx_task_assignees_task** | **Dohvat svih korisnika na zadatku** |
+| **TaskAssignee** | **idx_task_assignees_user** | **Dohvat svih zadataka korisnika** |
 | LoginEvent | idx_login_user | Povijest prijava korisnika |
 | LoginEvent | idx_login_time | Sortiranje po vremenu |
 | AuditLog | idx_audit_entity | Pretraga po entitetu |
@@ -789,27 +844,8 @@ CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 
 ---
 
-## 3.8 Dijagram - smjernice za izradu
 
-### Preporučeni alati
-- **draw.io** (diagrams.net) – besplatan, online
-- **Lucidchart** – profesionalni alat
-- **DbDiagram.io** – specifičan za baze podataka
-- **PlantUML** – tekstualni opis dijagrama
 
-### Elementi za uključiti
-1. Sve entitete kao pravokutnike s atributima
-2. Primarne ključeve označene (PK)
-3. Strane ključeve označene (FK)
-4. Linije odnosa s kardinalnostima (1, M, N)
-5. ENUM tipove kao zasebne elemente
-6. Grupiranje po domenama (User Management, Task Management, Audit)
 
-### Format izvoza
-- PNG (za dokumentaciju)
-- SVG (za skalabilnost)
-- PDF (za prezentacije)
-
----
 
 
