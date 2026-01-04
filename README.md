@@ -24,9 +24,40 @@ Ovaj projekt demonstrira primjenu **poopćenih i objektno-relacijskih baza podat
 
 ---
 
-##  Brzi početak
+##  Automatska instalacija
 
-###  Ručno pokretanje
+### Preduvjeti
+- PostgreSQL 14+ instaliran i pokrenut
+- Python 3.9+
+- Node.js 16+ i npm
+
+### Windows (PowerShell) - PREPORUČENO
+```powershell
+# Pokrenite instalacijsku skriptu iz setup foldera
+.\setup\install.ps1
+```
+
+### Windows (Command Prompt)
+```batch
+# Pokrenite batch skriptu iz setup foldera
+setup\install.bat
+```
+
+Instalacijska skripta automatski:
+1.  Provjerava preduvjete (PostgreSQL, Python, Node.js)
+2.  Kreira bazu podataka
+3.  Izvršava sve SQL skripte (schema, seed data, funkcije)
+4.  Postavlja Python virtual environment i instalira pakete
+5.  Instalira npm pakete za frontend
+
+### Pokretanje nakon instalacije
+```powershell
+.\setup\start.ps1    # ili setup\start.bat
+```
+
+---
+
+##  Ručna instalacija
 
  **Detaljne upute:** [`QUICK_START.md`](QUICK_START.md)
 
