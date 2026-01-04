@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { rolesAPI, usersAPI } from '../services/api';
 import { formatErrorMessage } from '../utils/errorHandler';
@@ -32,9 +32,35 @@ const Roles = () => {
   const [showRolePermissionsModal, setShowRolePermissionsModal] = useState(false);
   const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState(null);
 
+  // Refs za automatsko skrolanje do modala
+  const assignModalRef = useRef(null);
+  const roleModalRef = useRef(null);
+  const rolePermissionsModalRef = useRef(null);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // Auto-scroll kada se otvori modal za dodjelu uloge
+  useEffect(() => {
+    if (showAssignModal && assignModalRef.current) {
+      assignModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showAssignModal]);
+
+  // Auto-scroll kada se otvori modal za kreiranje/uređivanje uloge
+  useEffect(() => {
+    if (showRoleModal && roleModalRef.current) {
+      roleModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showRoleModal]);
+
+  // Auto-scroll kada se otvori modal za permisije uloge
+  useEffect(() => {
+    if (showRolePermissionsModal && rolePermissionsModalRef.current) {
+      rolePermissionsModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showRolePermissionsModal]);
 
   const loadData = async () => {
     setLoading(true);
@@ -622,7 +648,7 @@ const Roles = () => {
 
       {/* Modal za dodjelu uloga */}
       {showAssignModal && (
-        <div className="modal">
+        <div className="modal" ref={assignModalRef}>
           <div className="modal-content">
             <div className="modal-header">
               <h2>Dodijeli ulogu korisniku</h2>
@@ -692,7 +718,7 @@ const Roles = () => {
 
       {/* Modal za kreiranje/uređivanje uloge */}
       {showRoleModal && (
-        <div className="modal">
+        <div className="modal" ref={roleModalRef}>
           <div className="modal-content">
             <div className="modal-header">
               <h2>{editingRole ? 'Uredi ulogu' : 'Nova uloga'}</h2>
@@ -743,7 +769,7 @@ const Roles = () => {
 
       {/* Modal za upravljanje permisijama uloge */}
       {showRolePermissionsModal && selectedRoleForPermissions && (
-        <div className="modal modal-large">
+        <div className="modal modal-large" ref={rolePermissionsModalRef}>
           <div className="modal-content modal-content-large">
             <div className="modal-header">
               <h2>🔑 Permisije uloge: {selectedRoleForPermissions.name}</h2>
