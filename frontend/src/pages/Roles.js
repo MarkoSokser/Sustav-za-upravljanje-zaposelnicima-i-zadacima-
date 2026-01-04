@@ -32,14 +32,67 @@ const Roles = () => {
   const [showRolePermissionsModal, setShowRolePermissionsModal] = useState(false);
   const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState(null);
 
+  // Stanja za "Moj profil" sekciju
+  const [showMyProfile, setShowMyProfile] = useState(false);
+  const [myPermissions, setMyPermissions] = useState([]);
+  const [loadingMyPermissions, setLoadingMyPermissions] = useState(false);
+
   // Refs za automatsko skrolanje do modala
   const assignModalRef = useRef(null);
   const roleModalRef = useRef(null);
   const rolePermissionsModalRef = useRef(null);
+  const myProfileRef = useRef(null);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Učitaj vlastite permisije za EMPLOYEE (bez ROLE_READ)
+  useEffect(() => {
+    if (!hasPermission('ROLE_READ') && currentUser?.user_id) {
+      loadMyPermissions();
+    }
+  }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll kada se otvori "Moj profil" sekcija
+  useEffect(() => {
+    if (showMyProfile && myProfileRef.current) {
+      myProfileRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showMyProfile]);
+
+  const loadMyPermissions = async () => {
+    if (!currentUser?.user_id) return;
+    setLoadingMyPermissions(true);
+    try {
+      const response = await rolesAPI.getUserEffectivePermissions(currentUser.user_id);
+      setMyPermissions(response.data || []);
+    } catch (error) {
+      console.error('Greška pri učitavanju permisija:', error);
+    } finally {
+      setLoadingMyPermissions(false);
+    }
+  };
+
+  const handleShowMyProfile = () => {
+    if (!showMyProfile && myPermissions.length === 0) {
+      loadMyPermissions();
+    }
+    setShowMyProfile(!showMyProfile);
+  };
+
+  // Grupiraj moje permisije po kategoriji
+  const getMyPermissionsByCategory = () => {
+    const grouped = {};
+    myPermissions.forEach(perm => {
+      const category = perm.category || 'Ostalo';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(perm);
+    });
+    return grouped;
+  };
 
   // Auto-scroll kada se otvori modal za dodjelu uloge
   useEffect(() => {
@@ -391,6 +444,15 @@ const Roles = () => {
       <div className="page-header">
         <h1>Uloge i Permisije</h1>
         <div className="header-actions">
+          {/* Gumb "Moj profil" za ADMIN i MANAGER */}
+          {hasPermission('ROLE_READ') && (
+            <button 
+              className={`btn ${showMyProfile ? 'btn-secondary' : 'btn-info'}`}
+              onClick={handleShowMyProfile}
+            >
+              👤 {showMyProfile ? 'Sakrij moj profil' : 'Moj profil'}
+            </button>
+          )}
           {canCreate && (
             <button className="btn btn-success" onClick={openCreateRoleModal}>
               + Nova uloga
@@ -407,77 +469,188 @@ const Roles = () => {
       {error && <div className="error">{error}</div>}
       {success && <div className="success">{success}</div>}
 
-      {/* Pregled uloga */}
-      <div className="roles-grid">
-        {roles.map(role => (
-          <div key={role.role_id} className="card role-card">
-            <div className="role-header">
-              <h2>{role.name}</h2>
-              {role.is_system && <span className="badge badge-warning">Sistemska</span>}
-            </div>
-            <p>{role.description}</p>
-            
-            <div className="role-stats">
-              <span>👥 {role.user_count} korisnika</span>
-              <span>🔑 {role.permissions ? [...new Set(role.permissions)].length : 0} permisija</span>
-            </div>
-
-            <div className="permissions-list">
-              <h4>Permisije:</h4>
-              <div className="permissions-tags">
-                {role.permissions && role.permissions.length > 0 ? (
-                  [...new Set(role.permissions)].map((perm, idx) => (
-                    <span key={idx} className="badge badge-info">
-                      {perm}
+      {/* Sekcija "Moj profil" za ADMIN/MANAGER (pokazuje se na klik) */}
+      {hasPermission('ROLE_READ') && showMyProfile && (
+        <div className="card my-profile-card" ref={myProfileRef}>
+          <div className="my-profile-header">
+            <h2>👤 Moj profil - {currentUser?.first_name} {currentUser?.last_name}</h2>
+          </div>
+          
+          <div className="my-profile-content">
+            <div className="profile-roles-section">
+              <h4>Moje uloge:</h4>
+              <div className="roles-badges">
+                {currentUser?.roles?.length > 0 ? (
+                  currentUser.roles.map((role, idx) => (
+                    <span key={idx} className="badge badge-primary role-badge-large">
+                      {typeof role === 'string' ? role : role.name}
                     </span>
                   ))
                 ) : (
-                  <span className="text-muted">Nema permisija</span>
+                  <span className="text-muted">Nemate dodijeljenih uloga</span>
                 )}
               </div>
             </div>
 
-            {/* Akcije za upravljanje ulogom */}
-            {(canUpdate || canDelete) && (
-              <div className="role-actions">
-                {canUpdate && (
-                  <>
-                    <button 
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => openEditRoleModal(role)}
-                      title="Uredi ulogu"
-                    >
-                      ✏️ Uredi
-                    </button>
-                    <button 
-                      className="btn btn-info btn-sm"
-                      onClick={() => openRolePermissionsModal(role)}
-                      title="Upravljaj permisijama"
-                    >
-                      🔑 Permisije
-                    </button>
-                  </>
-                )}
-                {canDelete && !role.is_system && (
-                  <button 
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleDeleteRole(role)}
-                    title="Obriši ulogu"
-                    disabled={role.user_count > 0}
-                  >
-                    🗑️ Obriši
-                  </button>
+            <div className="profile-permissions-section">
+              <h4>Moje permisije ({myPermissions.length}):</h4>
+              {loadingMyPermissions ? (
+                <div className="loading">Učitavanje permisija...</div>
+              ) : myPermissions.length > 0 ? (
+                <div className="my-permissions-grid">
+                  {Object.entries(getMyPermissionsByCategory()).map(([category, perms]) => (
+                    <div key={category} className="my-permission-category">
+                      <h5>📁 {category}</h5>
+                      <div className="permission-tags">
+                        {perms.map(perm => (
+                          <span 
+                            key={perm.permission_code} 
+                            className="badge badge-info"
+                            title={perm.name}
+                          >
+                            {perm.permission_code}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-muted">Nemate dodijeljenih permisija</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sekcija za EMPLOYEE - direktno prikazane uloge i permisije */}
+      {!hasPermission('ROLE_READ') && (
+        <div className="card my-profile-card employee-profile">
+          <div className="my-profile-header">
+            <h2>🔐 Moje uloge i permisije</h2>
+          </div>
+          
+          <div className="my-profile-content">
+            <div className="profile-roles-section">
+              <h4>Moje uloge:</h4>
+              <div className="roles-badges">
+                {currentUser?.roles?.length > 0 ? (
+                  currentUser.roles.map((role, idx) => (
+                    <span key={idx} className="badge badge-primary role-badge-large">
+                      {typeof role === 'string' ? role : role.name}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-muted">Nemate dodijeljenih uloga</span>
                 )}
               </div>
-            )}
-          </div>
-        ))}
-      </div>
+            </div>
 
-      {/* Korisnici i njihove uloge */}
-      <div className="card" style={{marginTop: '30px'}}>
-        <h2>Korisnici i njihove uloge</h2>
-        <table className="table">
+            <div className="profile-permissions-section">
+              <h4>Moje permisije ({myPermissions.length}):</h4>
+              {loadingMyPermissions ? (
+                <div className="loading">Učitavanje permisija...</div>
+              ) : myPermissions.length > 0 ? (
+                <div className="my-permissions-grid">
+                  {Object.entries(getMyPermissionsByCategory()).map(([category, perms]) => (
+                    <div key={category} className="my-permission-category">
+                      <h5>📁 {category}</h5>
+                      <div className="permission-tags">
+                        {perms.map(perm => (
+                          <span 
+                            key={perm.permission_code} 
+                            className="badge badge-info"
+                            title={perm.name}
+                          >
+                            {perm.permission_code}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-muted">Nemate dodijeljenih permisija</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pregled uloga - samo za korisnike s ROLE_READ permisijom */}
+      {hasPermission('ROLE_READ') && (
+        <div className="roles-grid">
+          {roles.map(role => (
+            <div key={role.role_id} className="card role-card">
+              <div className="role-header">
+                <h2>{role.name}</h2>
+                {role.is_system && <span className="badge badge-warning">Sistemska</span>}
+              </div>
+              <p>{role.description}</p>
+              
+              <div className="role-stats">
+                <span>👥 {role.user_count} korisnika</span>
+                <span>🔑 {role.permissions ? [...new Set(role.permissions)].length : 0} permisija</span>
+              </div>
+
+              <div className="permissions-list">
+                <h4>Permisije:</h4>
+                <div className="permissions-tags">
+                  {role.permissions && role.permissions.length > 0 ? (
+                    [...new Set(role.permissions)].map((perm, idx) => (
+                      <span key={idx} className="badge badge-info">
+                        {perm}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted">Nema permisija</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Akcije za upravljanje ulogom */}
+              {(canUpdate || canDelete) && (
+                <div className="role-actions">
+                  {canUpdate && (
+                    <>
+                      <button 
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => openEditRoleModal(role)}
+                        title="Uredi ulogu"
+                      >
+                        ✏️ Uredi
+                      </button>
+                      <button 
+                        className="btn btn-info btn-sm"
+                        onClick={() => openRolePermissionsModal(role)}
+                        title="Upravljaj permisijama"
+                      >
+                        🔑 Permisije
+                      </button>
+                    </>
+                  )}
+                  {canDelete && !role.is_system && (
+                    <button 
+                      className="btn btn-danger btn-sm"
+                      onClick={() => handleDeleteRole(role)}
+                      title="Obriši ulogu"
+                      disabled={role.user_count > 0}
+                    >
+                      🗑️ Obriši
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Korisnici i njihove uloge - samo za korisnike s ROLE_READ permisijom */}
+      {hasPermission('ROLE_READ') && (
+        <div className="card" style={{marginTop: '30px'}}>
+          <h2>Korisnici i njihove uloge</h2>
+          <table className="table">
           <thead>
             <tr>
               <th>Korisnik</th>
@@ -535,7 +708,8 @@ const Roles = () => {
             ))}
           </tbody>
         </table>
-      </div>
+        </div>
+      )}
 
       {/* Sekcija za individualne permisije korisnika */}
       {canAssign && (
