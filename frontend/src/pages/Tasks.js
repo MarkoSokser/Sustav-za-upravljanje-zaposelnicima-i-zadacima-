@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { tasksAPI, usersAPI } from '../services/api';
 import TaskDetailsModal from '../components/TaskDetailsModal';
@@ -26,6 +26,9 @@ const Tasks = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
 
+  // Ref za automatsko skrolanje do modala
+  const modalRef = useRef(null);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -38,6 +41,13 @@ const Tasks = () => {
     loadTasks();
     loadUsers();
   }, [statusFilter, priorityFilter, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll kada se otvori modal
+  useEffect(() => {
+    if (showModal && modalRef.current) {
+      modalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showModal]);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -447,11 +457,11 @@ const Tasks = () => {
 
       {/* Modal za kreiranje/uređivanje */}
       {showModal && (
-        <div className="modal">
+        <div className="modal" ref={modalRef}>
           <div className="modal-content">
             <div className="modal-header">
               <h2>{isEditing ? 'Uredi zadatak' : 'Novi zadatak'}</h2>
-              <button className="close" onClick={() => setShowModal(false)}>&times;</button>
+              <button className="close-btn" onClick={() => setShowModal(false)}>&times;</button>
             </div>
             
             <form onSubmit={handleSubmit}>
