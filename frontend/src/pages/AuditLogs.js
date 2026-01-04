@@ -151,7 +151,7 @@ const AuditLogs = () => {
           <div className="card">
             <div className="audit-list">
               {auditLogs.map(log => (
-                <div key={log.log_id} className="audit-item">
+                <div key={log.audit_log_id} className="audit-item">
                   <div className="audit-header">
                     <div>
                       <span className={`badge ${getActionBadge(log.action)}`}>
@@ -161,7 +161,7 @@ const AuditLogs = () => {
                       {log.entity_id && <span className="entity-id">#{log.entity_id}</span>}
                     </div>
                     <div className="audit-meta">
-                      <span>👤 {log.changed_by_name}</span>
+                      <span>👤 Korisnik #{log.changed_by || 'Sustav'}</span>
                       <span>🕐 {formatTimestamp(log.changed_at)}</span>
                     </div>
                   </div>
@@ -197,26 +197,26 @@ const AuditLogs = () => {
             <thead>
               <tr>
                 <th>Korisnik</th>
-                <th>Email</th>
                 <th>IP Adresa</th>
                 <th>Uspješno</th>
+                <th>Razlog greške</th>
                 <th>Vrijeme</th>
               </tr>
             </thead>
             <tbody>
               {loginEvents.map(event => (
-                <tr key={event.event_id}>
-                  <td>{event.username}</td>
-                  <td>{event.user_email || '-'}</td>
+                <tr key={event.login_event_id}>
+                  <td>{event.username_attempted || '-'}</td>
                   <td>
                     <code>{event.ip_address || '-'}</code>
                   </td>
                   <td>
-                    <span className={`badge ${event.successful ? 'badge-success' : 'badge-danger'}`}>
-                      {event.successful ? '✓ Uspješno' : '✗ Neuspješno'}
+                    <span className={`badge ${event.success ? 'badge-success' : 'badge-danger'}`}>
+                      {event.success ? '✓ Uspješno' : '✗ Neuspješno'}
                     </span>
                   </td>
-                  <td>{formatTimestamp(event.attempted_at)}</td>
+                  <td>{event.failure_reason || '-'}</td>
+                  <td>{formatTimestamp(event.login_time)}</td>
                 </tr>
               ))}
             </tbody>
