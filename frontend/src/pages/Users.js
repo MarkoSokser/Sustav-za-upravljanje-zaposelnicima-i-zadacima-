@@ -23,8 +23,7 @@ const Users = () => {
     password: '',
     first_name: '',
     last_name: '',
-    phone: '',
-    department: '',
+    manager_id: '',
   });
 
   useEffect(() => {
@@ -94,8 +93,7 @@ const Users = () => {
       password: '',
       first_name: '',
       last_name: '',
-      phone: '',
-      department: '',
+      manager_id: '',
     });
     setShowModal(true);
     setError('');
@@ -111,8 +109,7 @@ const Users = () => {
       password: '',
       first_name: user.first_name,
       last_name: user.last_name,
-      phone: user.phone || '',
-      department: user.department || '',
+      manager_id: user.manager_id || '',
     });
     setShowModal(true);
     setError('');
@@ -125,17 +122,24 @@ const Users = () => {
     setSuccess('');
 
     try {
+      // Pripremi podatke - konvertiraj manager_id u broj ili null
+      const dataToSend = { ...formData };
+      if (dataToSend.manager_id === '' || dataToSend.manager_id === null) {
+        dataToSend.manager_id = null;
+      } else {
+        dataToSend.manager_id = parseInt(dataToSend.manager_id);
+      }
+
       if (isEditing) {
         // Update user - ne šaljemo password ako je prazan
-        const updateData = { ...formData };
-        if (!updateData.password) {
-          delete updateData.password;
+        if (!dataToSend.password) {
+          delete dataToSend.password;
         }
-        await usersAPI.update(selectedUser.user_id, updateData);
+        await usersAPI.update(selectedUser.user_id, dataToSend);
         setSuccess('Korisnik uspješno ažuriran');
       } else {
         // Create user
-        await usersAPI.create(formData);
+        await usersAPI.create(dataToSend);
         setSuccess('Korisnik uspješno kreiran');
       }
       
@@ -182,6 +186,32 @@ const Users = () => {
     } catch (error) {
       console.error('User status change error:', error);
       setError(formatErrorMessage(error, 'Greška pri promjeni statusa korisnika.'));
+    }
+  };
+
+  const handleAddToTeam = async (userId) => {
+    try {
+      await usersAPI.addToTeam(userId);
+      setSuccess('Korisnik uspješno dodan u vaš tim');
+      loadUsers();
+      loadTeam();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Add to team error:', error);
+      setError(formatErrorMessage(error, 'Greška pri dodavanju u tim.'));
+    }
+  };
+
+  const handleRemoveFromTeam = async (userId) => {
+    try {
+      await usersAPI.removeFromTeam(userId);
+      setSuccess('Korisnik uspješno uklonjen iz tima');
+      loadUsers();
+      loadTeam();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Remove from team error:', error);
+      setError(formatErrorMessage(error, 'Greška pri uklanjanju iz tima.'));
     }
   };
 
@@ -295,6 +325,28 @@ const Users = () => {
                         Obriši
                       </button>
                     )}
+                    {/* Gumb za dodavanje u tim - samo za managere u "Svi korisnici" pogledu */}
+                    {isManager() && viewMode === 'all' && 
+                     user.user_id !== currentUser?.user_id && 
+                     user.manager_id !== currentUser?.user_id && (
+                      <button 
+                        className="btn btn-info btn-sm"
+                        onClick={() => handleAddToTeam(user.user_id)}
+                        title="Dodaj ovog korisnika u svoj tim"
+                      >
+                        + Moj tim
+                      </button>
+                    )}
+                    {/* Gumb za uklanjanje iz tima - samo u pogledu tima */}
+                    {isManager() && viewMode === 'team' && (
+                      <button 
+                        className="btn btn-warning btn-sm"
+                        onClick={() => handleRemoveFromTeam(user.user_id)}
+                        title="Ukloni iz tima"
+                      >
+                        Ukloni
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -368,22 +420,23 @@ const Users = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Telefon</label>
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  />
+                  <label>Nadređeni (Manager)</label>
+                  <select
+                    value={formData.manager_id}
+                    onChange={(e) => setFormData({...formData, manager_id: e.target.value})}
+                  >
+                    <option value="">-- Bez nadrređenog --</option>
+                    {users
+                      .filter(u => u.is_active && u.user_id !== selectedUser?.user_id)
+                      .filter(u => u.roles?.some(r => ['ADMIN', 'MANAGER'].includes(r)))
+                      .map(u => (
+                        <option key={u.user_id} value={u.user_id}>
+                          {u.first_name} {u.last_name} ({u.roles?.join(', ')})
+                        </option>
+                      ))
+                    }
+                  </select>
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label>Odjel</label>
-                <input
-                  type="text"
-                  value={formData.department}
-                  onChange={(e) => setFormData({...formData, department: e.target.value})}
-                />
               </div>
 
               {error && <div className="error">{error}</div>}

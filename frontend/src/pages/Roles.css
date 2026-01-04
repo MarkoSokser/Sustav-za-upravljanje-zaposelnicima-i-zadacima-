@@ -551,3 +551,109 @@
   color: #999;
   font-style: italic;
 }
+
+/* ==================== MOJ PROFIL SEKCIJA ==================== */
+.my-profile-card {
+  margin-bottom: 25px;
+  border-left: 4px solid #667eea;
+  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+}
+
+.my-profile-card.employee-profile {
+  border-left: 4px solid #4CAF50;
+  background: linear-gradient(135deg, #f1f8e9 0%, #ffffff 100%);
+}
+
+.my-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.my-profile-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.my-profile-content {
+  padding: 10px 0;
+}
+
+.profile-roles-section {
+  margin-bottom: 25px;
+}
+
+.profile-roles-section h4,
+.profile-permissions-section h4 {
+  margin: 0 0 15px 0;
+  color: #555;
+  font-size: 16px;
+}
+
+.roles-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.role-badge-large {
+  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: 20px;
+}
+
+.profile-permissions-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.my-permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+.my-permission-category {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.my-permission-category h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.permission-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.permission-tags .badge {
+  font-size: 11px;
+  padding: 5px 10px;
+}
+
+/* Header actions stilovi */
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #138496;
+}

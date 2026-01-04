@@ -485,14 +485,22 @@ async def get_user_direct_permissions(
             summary="Dohvati efektivne permisije korisnika")
 async def get_user_effective_permissions(
     user_id: int,
-    current_user: dict = Depends(require_permission("ROLE_READ")),
+    current_user: dict = Depends(get_current_active_user),
     conn = Depends(get_db_dependency)
 ):
     """
     Dohvaca sve efektivne permisije korisnika (iz uloga + direktno dodijeljene).
     
-    Potrebna permisija: ROLE_READ
+    Korisnik moze vidjeti vlastite permisije ili ako ima ROLE_READ permisiju.
     """
+    # Provjeri da li korisnik gleda vlastite permisije ili ima ROLE_READ
+    if current_user['user_id'] != user_id:
+        if 'ROLE_READ' not in current_user.get('permissions', []):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nemate pristup permisijama ovog korisnika"
+            )
+    
     with conn.cursor() as cur:
         cur.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
         if not cur.fetchone():

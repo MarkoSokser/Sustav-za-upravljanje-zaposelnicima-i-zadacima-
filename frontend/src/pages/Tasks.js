@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { tasksAPI, usersAPI } from '../services/api';
 import TaskDetailsModal from '../components/TaskDetailsModal';
@@ -26,6 +26,13 @@ const Tasks = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
 
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+
+  // Ref za automatsko skrolanje do modala
+  const modalRef = useRef(null);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -38,6 +45,13 @@ const Tasks = () => {
     loadTasks();
     loadUsers();
   }, [statusFilter, priorityFilter, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll kada se otvori modal
+  useEffect(() => {
+    if (showModal && modalRef.current) {
+      modalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showModal]);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -170,19 +184,25 @@ const Tasks = () => {
     }
   };
 
-  const handleDelete = async (taskId) => {
-    if (!window.confirm('Jeste li sigurni da želite obrisati ovaj zadatak?')) {
-      return;
-    }
+  const handleDeleteClick = (task) => {
+    setTaskToDelete(task);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!taskToDelete) return;
 
     try {
-      await tasksAPI.delete(taskId);
+      await tasksAPI.delete(taskToDelete.task_id);
       setSuccess('Zadatak uspješno obrisan');
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Task delete error:', error);
       setError(formatErrorMessage(error));
+    } finally {
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
   };
 
@@ -432,7 +452,7 @@ const Tasks = () => {
                     {canDelete && (
                       <button 
                         className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(task.task_id)}
+                        onClick={() => handleDeleteClick(task)}
                       >
                         Obriši
                       </button>
@@ -447,11 +467,11 @@ const Tasks = () => {
 
       {/* Modal za kreiranje/uređivanje */}
       {showModal && (
-        <div className="modal">
+        <div className="modal" ref={modalRef}>
           <div className="modal-content">
             <div className="modal-header">
               <h2>{isEditing ? 'Uredi zadatak' : 'Novi zadatak'}</h2>
-              <button className="close" onClick={() => setShowModal(false)}>&times;</button>
+              <button className="close-btn" onClick={() => setShowModal(false)}>&times;</button>
             </div>
             
             <form onSubmit={handleSubmit}>
@@ -540,6 +560,35 @@ const Tasks = () => {
           task={taskDetails} 
           onClose={() => setShowDetailsModal(false)} 
         />
+      )}
+
+      {/* Modal za potvrdu brisanja */}
+      {showDeleteModal && (
+        <div className="confirm-modal-overlay">
+          <div className="confirm-modal">
+            <div className="confirm-modal-header">
+              <h3>Potvrda brisanja</h3>
+            </div>
+            <div className="confirm-modal-body">
+              <p>Jeste li sigurni da želite obrisati zadatak:</p>
+              <p><strong>"{taskToDelete?.title}"</strong></p>
+            </div>
+            <div className="confirm-modal-actions">
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => { setShowDeleteModal(false); setTaskToDelete(null); }}
+              >
+                Odustani
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={handleDeleteConfirm}
+              >
+                Obriši
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

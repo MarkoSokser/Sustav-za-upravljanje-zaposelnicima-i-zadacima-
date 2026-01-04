@@ -214,6 +214,129 @@ async def get_team_members(
     return [TeamMember(**member) for member in members]
 
 
+@router.post("/{user_id}/team/add", response_model=MessageResponse,
+             summary="Dodaj korisnika u tim")
+async def add_to_team(
+    user_id: int,
+    current_user: dict = Depends(get_current_active_user),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Manager dodaje korisnika u svoj tim.
+    Postavlja manager_id korisnika na ID trenutnog managera.
+    """
+    # Provjeri je li trenutni korisnik manager ili admin
+    is_current_admin = is_admin(conn, current_user['user_id'])
+    is_current_manager = check_permission(conn, current_user['user_id'], 'USER_READ_TEAM')
+    
+    if not is_current_admin and not is_current_manager:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Samo manageri mogu dodavati clanove u tim"
+        )
+    
+    # Ne mozes dodati sebe u svoj tim
+    if user_id == current_user['user_id']:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ne mozete dodati sebe u vlastiti tim"
+        )
+    
+    # Provjeri postoji li korisnik
+    with conn.cursor() as cur:
+        cur.execute("SELECT user_id, manager_id, username FROM users WHERE user_id = %s", (user_id,))
+        target_user = cur.fetchone()
+    
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Korisnik nije pronadjen"
+        )
+    
+    # Ako korisnik vec ima managera, provjeri je li to vec ovaj manager
+    if target_user['manager_id'] == current_user['user_id']:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Korisnik je vec u vasem timu"
+        )
+    
+    # Postavi manager_id
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users SET manager_id = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = %s
+            """, (current_user['user_id'], user_id))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    return MessageResponse(
+        message=f"Korisnik {target_user['username']} dodan u vas tim",
+        success=True
+    )
+
+
+@router.post("/{user_id}/team/remove", response_model=MessageResponse,
+             summary="Ukloni korisnika iz tima")
+async def remove_from_team(
+    user_id: int,
+    current_user: dict = Depends(get_current_active_user),
+    conn = Depends(get_db_dependency)
+):
+    """
+    Manager uklanja korisnika iz svog tima.
+    Postavlja manager_id korisnika na NULL.
+    """
+    # Provjeri je li trenutni korisnik manager ili admin
+    is_current_admin = is_admin(conn, current_user['user_id'])
+    is_current_manager = check_permission(conn, current_user['user_id'], 'USER_READ_TEAM')
+    
+    if not is_current_admin and not is_current_manager:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Samo manageri mogu uklanjati clanove iz tima"
+        )
+    
+    # Provjeri postoji li korisnik i je li u timu ovog managera
+    with conn.cursor() as cur:
+        cur.execute("SELECT user_id, manager_id, username FROM users WHERE user_id = %s", (user_id,))
+        target_user = cur.fetchone()
+    
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Korisnik nije pronadjen"
+        )
+    
+    # Provjeri je li korisnik u timu ovog managera
+    if target_user['manager_id'] != current_user['user_id'] and not is_current_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Korisnik nije u vasem timu"
+        )
+    
+    # Ukloni iz tima (postavi manager_id na NULL)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users SET manager_id = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = %s
+            """, (user_id,))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    return MessageResponse(
+        message=f"Korisnik {target_user['username']} uklonjen iz tima",
+        success=True
+    )
+
+
 @router.post("", response_model=MessageResponse, summary="Kreiraj korisnika")
 async def create_user(
     user_data: UserCreate,

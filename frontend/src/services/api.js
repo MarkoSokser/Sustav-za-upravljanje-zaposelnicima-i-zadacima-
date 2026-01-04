@@ -99,6 +99,12 @@ export const usersAPI = {
   
   removeManager: (userId) => 
     api.delete(`/users/${userId}/remove-manager`),
+  
+  addToTeam: (userId) => 
+    api.post(`/users/${userId}/team/add`),
+  
+  removeFromTeam: (userId) => 
+    api.post(`/users/${userId}/team/remove`),
 };
 
 // ==================== TASKS API ====================
