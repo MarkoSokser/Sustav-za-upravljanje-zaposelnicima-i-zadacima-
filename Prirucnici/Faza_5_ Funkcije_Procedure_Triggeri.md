@@ -6,10 +6,14 @@ Faza 5 implementira aktivnu bazu podataka sa:
 - **12 funkcija** za validaciju i dohvat podataka
 - **11 procedura** za CRUD operacije
 - **7 triggera** za automatizaciju
+- **4 RULES pravila** za automatsku zastitu podataka
+- **1 arhivska tablica** kreirana pomocu LIKE klauzule
 
-### Nove značajke
+### Nove znacajke
 - **Tijek odobravanja zadataka** - PENDING_APPROVAL status
 - **Provjera direktnih permisija** - user_permissions tablica
+- **LIKE klauzula** - kreiranje arhivske tablice sa strukturom izvorne tablice
+- **RULES pravila** - automatska zastita i arhivacija podataka
 
 ---
 
@@ -321,6 +325,259 @@ SELECT log_login_attempt(
 - `INVALID_CREDENTIALS`
 - `ACCOUNT_INACTIVE`
 - `ACCOUNT_LOCKED`
+
+---
+
+## 8. LIKE Klauzula - Arhivska Tablica
+
+### Sto je LIKE klauzula?
+
+LIKE klauzula u PostgreSQL-u omogucuje kreiranje nove tablice koja nasljedjuje strukturu postojece tablice. To je korisno za:
+- Kreiranje arhivskih tablica
+- Kreiranje backup tablica
+- Kreiranje tablica za testiranje
+
+### `tasks_archive` - Arhivska tablica za zadatke
+
+Tablica `tasks_archive` kreirana je pomocu LIKE klauzule i sluzi za pohranu zavrsenih/otkazanih zadataka starijih od 180 dana.
+
+```sql
+CREATE TABLE tasks_archive (
+    LIKE tasks INCLUDING DEFAULTS INCLUDING COMMENTS,
+    archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_by INTEGER,
+    archive_reason TEXT
+);
+
+ALTER TABLE tasks_archive ADD PRIMARY KEY (task_id);
+```
+
+**Sto LIKE klauzula kopira:**
+- Nazive i tipove stupaca
+- DEFAULT vrijednosti (INCLUDING DEFAULTS)
+- Komentare (INCLUDING COMMENTS)
+
+**Sto LIKE klauzula NE kopira:**
+- PRIMARY KEY (mora se rucno dodati)
+- FOREIGN KEY ogranicenja
+- SERIAL/IDENTITY sekvence
+- Indekse (osim uz INCLUDING INDEXES)
+
+### Struktura tasks_archive tablice
+
+| Stupac | Tip | Opis |
+|--------|-----|------|
+| task_id | INTEGER | ID zadatka (PK) |
+| title | VARCHAR(200) | Naziv zadatka |
+| description | TEXT | Opis zadatka |
+| status | task_status | Status (COMPLETED/CANCELLED) |
+| priority | task_priority | Prioritet |
+| due_date | DATE | Rok zavretka |
+| created_by | INTEGER | Kreator |
+| assigned_to | INTEGER | Dodijeljen korisniku |
+| created_at | TIMESTAMP | Datum kreiranja |
+| updated_at | TIMESTAMP | Datum azuriranja |
+| completed_at | TIMESTAMP | Datum zavrsetka |
+| **archived_at** | TIMESTAMP | Datum arhiviranja |
+| **archived_by** | INTEGER | Tko je arhivirao |
+| **archive_reason** | TEXT | Razlog arhiviranja |
+
+---
+
+## 9. RULES - Pravila za Automatsku Zastitu
+
+### Sto su RULES?
+
+PostgreSQL RULES su mehanizam za transformaciju upita. Kada se izvrsi odredjeni upit (INSERT, UPDATE, DELETE, SELECT), RULE moze:
+- **DO INSTEAD** - Zamijeniti originalni upit drugim upitom
+- **DO ALSO** - Izvrsiti dodatni upit uz originalni
+- **DO INSTEAD NOTHING** - Potpuno ignorirati originalni upit
+
+### Razlika izmedju RULES i TRIGGERS
+
+| Karakteristika | RULES | TRIGGERS |
+|----------------|-------|----------|
+| Razina | Upit (query rewriting) | Red (row-level) |
+| Izvrsavanje | Prije izvrsenja upita | Prije/Poslije operacije |
+| Performanse | Brze za bulk operacije | Bolje za pojedinacne redove |
+| Fleksibilnost | Ogranicena | Veca (PL/pgSQL) |
+| Vidljivost | Upit se transformira | Upit ostaje isti |
+
+### RULE 1: prevent_system_role_delete
+
+**Svrha:** Sprijecava brisanje sistemskih uloga (ADMIN, MANAGER, EMPLOYEE).
+
+```sql
+CREATE RULE prevent_system_role_delete AS
+    ON DELETE TO roles
+    WHERE OLD.is_system = TRUE
+    DO INSTEAD NOTHING;
+```
+
+**Primjer:**
+```sql
+-- Pokusaj brisanja ADMIN uloge - IGNORIRA SE
+DELETE FROM roles WHERE name = 'ADMIN';
+-- Rezultat: 0 redova obrisano, uloga ostaje netaknuta
+
+-- Brisanje custom uloge - USPJESNO
+DELETE FROM roles WHERE name = 'CUSTOM_ROLE' AND is_system = FALSE;
+-- Rezultat: Uloga je obrisana
+```
+
+### RULE 2: log_user_delete_attempt
+
+**Svrha:** Automatski logira svaki pokusaj brisanja korisnika u audit_log tablicu.
+
+```sql
+CREATE RULE log_user_delete_attempt AS
+    ON DELETE TO users
+    DO ALSO (
+        INSERT INTO audit_log (entity_name, entity_id, action, old_value, new_value)
+        VALUES (
+            'users', 
+            OLD.user_id, 
+            'DELETE',
+            jsonb_build_object(
+                'username', OLD.username,
+                'email', OLD.email,
+                'first_name', OLD.first_name,
+                'last_name', OLD.last_name,
+                'deleted_at', CURRENT_TIMESTAMP
+            ),
+            NULL
+        )
+    );
+```
+
+**Primjer:**
+```sql
+-- Brisanje korisnika automatski kreira audit zapis
+DELETE FROM users WHERE user_id = 10;
+
+-- Provjera audit loga
+SELECT * FROM audit_log WHERE entity_name = 'users' AND action = 'DELETE';
+-- old_value: {"username": "korisnik", "email": "korisnik@example.com", ...}
+```
+
+### RULE 3: auto_archive_old_completed
+
+**Svrha:** Automatski arhivira zavrsene/otkazane zadatke starije od 180 dana.
+
+```sql
+CREATE RULE auto_archive_old_completed AS
+    ON UPDATE TO tasks
+    WHERE NEW.status IN ('COMPLETED', 'CANCELLED') 
+    AND NEW.updated_at < CURRENT_TIMESTAMP - INTERVAL '180 days'
+    DO ALSO (
+        INSERT INTO tasks_archive (...)
+        SELECT ... 
+        WHERE NOT EXISTS (SELECT 1 FROM tasks_archive WHERE task_id = NEW.task_id)
+    );
+```
+
+**Kada se aktivira:**
+- Kada se azurira zadatak koji je COMPLETED ili CANCELLED
+- I taj zadatak ima updated_at stariji od 180 dana
+- I zadatak vec nije u arhivi
+
+**Primjer:**
+```sql
+-- Azuriranje starog zavrsenog zadatka triggeruje arhivaciju
+UPDATE tasks 
+SET status = 'COMPLETED' 
+WHERE task_id = 100 AND updated_at < CURRENT_TIMESTAMP - INTERVAL '181 days';
+
+-- Zadatak je sada u tasks_archive tablici
+SELECT * FROM tasks_archive WHERE task_id = 100;
+```
+
+### RULE 4: prevent_completed_task_edit
+
+**Svrha:** Sprijecava izmjenu zavrsenih ili otkazanih zadataka (osim promjene statusa).
+
+```sql
+CREATE RULE prevent_completed_task_edit AS
+    ON UPDATE TO tasks
+    WHERE OLD.status IN ('COMPLETED', 'CANCELLED')
+    AND (
+        NEW.title != OLD.title OR
+        NEW.description IS DISTINCT FROM OLD.description OR
+        NEW.priority != OLD.priority OR
+        NEW.due_date IS DISTINCT FROM OLD.due_date OR
+        NEW.created_by != OLD.created_by OR
+        NEW.assigned_to IS DISTINCT FROM OLD.assigned_to
+    )
+    DO INSTEAD NOTHING;
+```
+
+**Sto se NE moze mijenjati na zavrsenom zadatku:**
+- title (naslov)
+- description (opis)
+- priority (prioritet)
+- due_date (rok)
+- created_by (kreator)
+- assigned_to (dodijeljen)
+
+**Sto se MOZE mijenjati:**
+- status (npr. vratiti zadatak na doradu)
+
+**Primjer:**
+```sql
+-- Pokusaj izmjene naslova zavrsenog zadatka - IGNORIRA SE
+UPDATE tasks SET title = 'Novi naslov' WHERE task_id = 5 AND status = 'COMPLETED';
+-- Rezultat: 0 redova azurirano
+
+-- Promjena statusa - USPJESNO
+UPDATE tasks SET status = 'IN_PROGRESS' WHERE task_id = 5;
+-- Rezultat: Status promijenjen (ako je dozvoljeno workflow-om)
+```
+
+---
+
+## 10. Pregled svih RULES
+
+| RULE | Tablica | Dogadjaj | Akcija | Opis |
+|------|---------|----------|--------|------|
+| `prevent_system_role_delete` | roles | DELETE | DO INSTEAD NOTHING | Blokira brisanje sistemskih uloga |
+| `log_user_delete_attempt` | users | DELETE | DO ALSO | Logira brisanje u audit_log |
+| `auto_archive_old_completed` | tasks | UPDATE | DO ALSO | Arhivira stare zavrsene zadatke |
+| `prevent_completed_task_edit` | tasks | UPDATE | DO INSTEAD NOTHING | Blokira izmjenu zavrsenih zadataka |
+
+---
+
+## 11. SQL Skripta za Napredne Funkcije
+
+Sve napredne funkcije nalaze se u datoteci `database/04_advanced_features.sql`.
+
+### Redoslijed izvrsavanja
+
+```bash
+# 1. Prvo izvrsi osnovne skripte
+psql -U postgres -d employee_db -f database/01_schema.sql
+psql -U postgres -d employee_db -f database/02_seed_data.sql
+psql -U postgres -d employee_db -f database/03_functions_procedures.sql
+
+# 2. Zatim napredne funkcije
+psql -U postgres -d employee_db -f database/04_advanced_features.sql
+```
+
+### Testiranje
+
+```bash
+# Pokreni testove za napredne funkcije
+psql -U postgres -d employee_db -f tests/08_test_advanced_features.sql
+```
+
+**Ocekivani rezultati testova:**
+```
+TEST 1: tasks_archive tablica kreirana pomocu LIKE: OK
+TEST 2: Zastita sistemskih uloga od brisanja: OK
+TEST 3: Automatski audit log pri brisanju korisnika: OK
+TEST 4: Automatska arhivacija starih zavrsenih zadataka: OK
+TEST 5: Zastita zavrsenih zadataka od izmjena: OK
+TEST 6: Provjera da su svi RULES kreirani: OK (svi 4 RULES kreirani)
+```
 
 ---
 
