@@ -1,6 +1,9 @@
 # Environment variables 
-.env
-backend/.env
+# NAPOMENA: .env datoteka je NAMJERNO UKLJUCENA u repo za potrebe testiranja projekta.
+# U produkciji OBAVEZNO dodajte .env u .gitignore jer sadrzi osjetljive podatke!
+# Zakomentirano za testiranje:
+# .env
+# backend/.env
 
 # Python
 __pycache__/
