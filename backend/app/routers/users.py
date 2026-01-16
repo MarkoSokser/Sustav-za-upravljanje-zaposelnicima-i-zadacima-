@@ -404,10 +404,10 @@ async def update_user(
     
     Korisnik moze azurirati:
     - Vlastite podatke (osim is_active i manager_id)
-    - Sve podatke (ako ima USER_UPDATE permisiju)
+    - Sve podatke (ako ima USER_UPDATE_ALL permisiju)
     """
     is_self = user_id == current_user['user_id']
-    has_permission = check_permission(conn, current_user['user_id'], 'USER_UPDATE')
+    has_permission = check_permission(conn, current_user['user_id'], 'USER_UPDATE_ALL')
     
     if not is_self and not has_permission:
         raise HTTPException(

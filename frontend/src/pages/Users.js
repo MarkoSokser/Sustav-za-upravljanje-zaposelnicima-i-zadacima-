@@ -274,6 +274,7 @@ const Users = () => {
               <th>Ime i prezime</th>
               <th>Email</th>
               <th>Uloge</th>
+              <th>Nadređeni</th>
               <th>Status</th>
               <th>Akcije</th>
             </tr>
@@ -290,6 +291,9 @@ const Users = () => {
                       {role}
                     </span>
                   )) || '-'}
+                </td>
+                <td>
+                  {user.manager_full_name || '-'}
                 </td>
                 <td>
                   <span className={`badge ${user.is_active ? 'badge-success' : 'badge-danger'}`}>

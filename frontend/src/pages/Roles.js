@@ -347,8 +347,10 @@ const Roles = () => {
       setUserDirectPermissions(directRes.data);
       setUserEffectivePermissions(effectiveRes.data);
     } catch (error) {
-      console.error('Error loading user permissions:', error);
-      setError(formatErrorMessage(error, 'Greška pri učitavanju permisija korisnika'));
+      // Tiho ignoriraj greške - korisnik možda nema permisiju
+      console.log('User permissions not available');
+      setUserDirectPermissions([]);
+      setUserEffectivePermissions([]);
     } finally {
       setLoadingPermissions(false);
     }
