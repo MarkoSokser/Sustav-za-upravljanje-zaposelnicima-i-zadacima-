@@ -159,7 +159,7 @@ BEGIN
     WHERE up.user_id = p_user_id
     AND up.granted = TRUE
     
-    ORDER BY category, permission_code;
+    ORDER BY 3, 1;
 END;
 $$ LANGUAGE plpgsql STABLE;
 

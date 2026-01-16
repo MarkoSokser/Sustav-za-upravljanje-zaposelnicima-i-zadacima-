@@ -13,7 +13,8 @@ param(
     [string]$PostgresPort = "5432",
     [switch]$SkipDatabase,
     [switch]$SkipBackend,
-    [switch]$SkipFrontend
+    [switch]$SkipFrontend,
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -121,7 +122,11 @@ if (-not $SkipDatabase) {
     $checkDb = psql -h $PostgresHost -p $PostgresPort -U $PostgresUser -lqt 2>&1 | Select-String $DatabaseName
     
     if ($checkDb) {
-        $response = Read-Host "Baza '$DatabaseName' vec postoji. Zelite li je obrisati i kreirati iznova? (da/ne)"
+        if ($Force) {
+            $response = "da"
+        } else {
+            $response = Read-Host "Baza '$DatabaseName' vec postoji. Zelite li je obrisati i kreirati iznova? (da/ne)"
+        }
         if ($response -eq "da") {
             Write-Info "Brisanje postojece baze..."
             psql -h $PostgresHost -p $PostgresPort -U $PostgresUser -c "DROP DATABASE IF EXISTS $DatabaseName;" 2>&1 | Out-Null
