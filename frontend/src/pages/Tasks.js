@@ -424,7 +424,7 @@ const Tasks = () => {
                     ? task.assignee_names.join(', ')
                     : (task.assignee_name || '-')}
                 </td>
-                <td>{task.created_by_name}</td>
+                <td>{task.creator_name || '-'}</td>
                 <td>
                   {task.due_date ? (
                     <span className={new Date(task.due_date) < new Date() && task.status !== 'COMPLETED' ? 'overdue' : ''}>

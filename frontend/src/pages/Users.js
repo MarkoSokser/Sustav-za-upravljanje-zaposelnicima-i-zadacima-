@@ -273,7 +273,6 @@ const Users = () => {
               <th>Korisničko ime</th>
               <th>Ime i prezime</th>
               <th>Email</th>
-              {viewMode !== 'team' && <th>Odjel</th>}
               <th>Uloge</th>
               <th>Status</th>
               <th>Akcije</th>
@@ -285,7 +284,6 @@ const Users = () => {
                 <td>{user.username}</td>
                 <td>{user.first_name || user.full_name?.split(' ')[0]} {user.last_name || user.full_name?.split(' ').slice(1).join(' ')}</td>
                 <td>{user.email}</td>
-                {viewMode !== 'team' && <td>{user.department || '-'}</td>}
                 <td>
                   {user.roles?.map(role => (
                     <span key={role} className="badge badge-info" style={{marginRight: '5px'}}>
