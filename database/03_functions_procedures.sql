@@ -255,8 +255,13 @@ RETURNS TABLE(
     priority task_priority,
     due_date DATE,
     is_overdue BOOLEAN,
+    creator_id INTEGER,
     creator_name TEXT,
-    assignee_name TEXT
+    assignee_id INTEGER,
+    assignee_name TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    completed_at TIMESTAMP
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -268,8 +273,13 @@ BEGIN
         t.priority,
         t.due_date,
         (t.due_date < CURRENT_DATE AND t.status NOT IN ('COMPLETED', 'CANCELLED')) AS is_overdue,
+        t.created_by AS creator_id,
         (SELECT first_name || ' ' || last_name FROM users WHERE user_id = t.created_by) AS creator_name,
-        (SELECT first_name || ' ' || last_name FROM users WHERE user_id = t.assigned_to) AS assignee_name
+        t.assigned_to AS assignee_id,
+        (SELECT first_name || ' ' || last_name FROM users WHERE user_id = t.assigned_to) AS assignee_name,
+        t.created_at,
+        t.updated_at,
+        t.completed_at
     FROM tasks t
     WHERE (t.assigned_to = p_user_id OR (p_include_created AND t.created_by = p_user_id))
     AND (p_status IS NULL OR t.status = p_status)

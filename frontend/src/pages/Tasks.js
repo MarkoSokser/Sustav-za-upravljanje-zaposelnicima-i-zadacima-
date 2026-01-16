@@ -396,7 +396,7 @@ const Tasks = () => {
                 </td>
                 <td>
                   {/* Prikaži dropdown za promjenu statusa ako korisnik ima prava */}
-                  {(canUpdate || (canUpdateSelfStatus && task.assignee_ids?.includes(user?.user_id))) && 
+                  {(canUpdate || (canUpdateSelfStatus && (task.assignee_ids?.includes(user?.user_id) || task.assignee_id === user?.user_id || task.assigned_to === user?.user_id))) && 
                    task.status !== 'COMPLETED' && task.status !== 'CANCELLED' ? (
                     <select 
                       value={task.status}
