@@ -221,18 +221,28 @@ RETURNS TABLE(
     username VARCHAR(50),
     full_name TEXT,
     email VARCHAR(255),
-    is_active BOOLEAN
+    is_active BOOLEAN,
+    roles TEXT[],
+    manager_id INTEGER,
+    manager_full_name TEXT
 ) AS $$
 BEGIN
     RETURN QUERY
     SELECT 
         u.user_id,
         u.username::VARCHAR(50),
-        u.first_name || ' ' || u.last_name AS full_name,
+        (u.first_name || ' ' || u.last_name)::TEXT AS full_name,
         u.email::VARCHAR(255),
-        u.is_active
+        u.is_active,
+        COALESCE(ARRAY_AGG(DISTINCT r.name::TEXT) FILTER (WHERE r.name IS NOT NULL), ARRAY[]::TEXT[]) AS roles,
+        u.manager_id,
+        (m.first_name || ' ' || m.last_name)::TEXT AS manager_full_name
     FROM users u
+    LEFT JOIN user_roles ur ON u.user_id = ur.user_id
+    LEFT JOIN roles r ON ur.role_id = r.role_id
+    LEFT JOIN users m ON u.manager_id = m.user_id
     WHERE u.manager_id = p_manager_id
+    GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.email, u.is_active, u.manager_id, m.first_name, m.last_name
     ORDER BY u.last_name, u.first_name;
 END;
 $$ LANGUAGE plpgsql STABLE;

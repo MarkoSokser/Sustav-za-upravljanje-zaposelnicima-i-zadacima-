@@ -327,6 +327,9 @@ class TeamMember(BaseModel):
     full_name: str
     email: str
     is_active: bool
+    roles: Optional[List[str]] = None
+    manager_id: Optional[int] = None
+    manager_full_name: Optional[str] = None
 
 
 # ============== AUDIT MODELS ==============
