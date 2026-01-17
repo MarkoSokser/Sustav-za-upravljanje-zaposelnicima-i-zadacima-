@@ -10,6 +10,18 @@ Sustav za upravljanje korisnicima, zadacima i pravima pristupa s RBAC modelom.
 
 ## ⚡ Brzi start
 
+⚠️ **NAPOMENA:** Prije prvog pokretanja PowerShell skripti, morate dozvoliti njihovo izvršavanje:
+
+```powershell
+# Windows blokira nepotpisane skripte iz sigurnosnih razloga
+# Ova naredba dozvoljava izvršavanje samo u trenutnoj PowerShell sesiji
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+**Zašto je ovo potrebno?** Windows Execution Policy sprječava pokretanje nepotpisanih skripti radi zaštite sustava. `-Scope Process` osigurava da se bypass odnosi **samo na trenutnu sesiju** i ne mijenja sistemske postavke trajno.
+
+---
+
 ```powershell
 # 1. Dodajte PostgreSQL u PATH
 $env:PATH = "C:\Program Files\PostgreSQL\16\bin;$env:PATH"
