@@ -55,12 +55,55 @@ Write-Info "Provjera preduvjeta..."
 
 # Provjera PostgreSQL (samo ako nije SkipDatabase)
 if (-not $SkipDatabase) {
+    # Provjeri da li je psql dostupan u PATH-u
+    $psqlFound = $false
     try {
         $psqlVersion = psql --version 2>&1
-        Write-Step "PostgreSQL pronadjen: $psqlVersion"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Step "PostgreSQL pronadjen: $psqlVersion"
+            $psqlFound = $true
+        }
     } catch {
-        Write-ErrorMsg "PostgreSQL (psql) nije pronadjen! Molimo instalirajte PostgreSQL 14+."
-        Write-Output "Download: https://www.postgresql.org/download/"
+        # Nije u PATH-u, pokusaj pronaci na standardnim lokacijama
+    }
+    
+    # Ako nije u PATH-u, trazi na standardnim Windows lokacijama
+    if (-not $psqlFound) {
+        Write-Info "PostgreSQL nije u PATH-u, pretrazujem standardne lokacije..."
+        
+        $possiblePaths = @(
+            "C:\Program Files\PostgreSQL\16\bin",
+            "C:\Program Files\PostgreSQL\15\bin",
+            "C:\Program Files\PostgreSQL\14\bin",
+            "C:\Program Files\PostgreSQL\13\bin",
+            "C:\Program Files (x86)\PostgreSQL\16\bin",
+            "C:\Program Files (x86)\PostgreSQL\15\bin",
+            "C:\Program Files (x86)\PostgreSQL\14\bin"
+        )
+        
+        foreach ($path in $possiblePaths) {
+            if (Test-Path "$path\psql.exe") {
+                Write-Info "PostgreSQL pronadjen u: $path"
+                # Dodaj u PATH za ovu sesiju
+                $env:Path += ";$path"
+                $psqlVersion = & "$path\psql.exe" --version
+                Write-Step "PostgreSQL verzija: $psqlVersion"
+                $psqlFound = $true
+                break
+            }
+        }
+    }
+    
+    if (-not $psqlFound) {
+        Write-ErrorMsg "PostgreSQL (psql) nije pronadjen!"
+        Write-Output ""
+        Write-Output "Molimo:"
+        Write-Output "1. Instalirajte PostgreSQL 14+ sa: https://www.postgresql.org/download/"
+        Write-Output "   ILI"
+        Write-Output "2. Dodajte PostgreSQL\bin direktorij u PATH environment varijablu"
+        Write-Output "   Primjer: C:\Program Files\PostgreSQL\16\bin"
+        Write-Output ""
+        Write-Output "Nakon instalacije, ponovno pokrenite skriptu."
         exit 1
     }
 }
