@@ -7,6 +7,15 @@ Sustav za upravljanje korisnicima, zadacima i pravima pristupa s RBAC modelom.
 📁 **Instalacijske skripte:** [`setup/`](setup/)
 
 ---
+## Preduvjeti
+
+Prije pokretanja instalacijskih skripti, morate imati instalirano:
+
+1. **PostgreSQL 14+** - https://www.postgresql.org/download/
+2. **Python 3.9+** - https://www.python.org/downloads/
+3. **Node.js 16+** - https://nodejs.org/
+
+---
 
 ## ⚡ Brzi start
 
@@ -40,15 +49,7 @@ Aplikacija: **http://localhost:3000** | API Docs: **http://localhost:8000/docs**
 
 ---
 
-## Preduvjeti
 
-Prije pokretanja instalacijskih skripti, morate imati instalirano:
-
-1. **PostgreSQL 14+** - https://www.postgresql.org/download/
-2. **Python 3.9+** - https://www.python.org/downloads/
-3. **Node.js 16+** - https://nodejs.org/
-
----
 
 ## Automatska instalacija
 
