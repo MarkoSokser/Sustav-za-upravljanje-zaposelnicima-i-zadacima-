@@ -419,13 +419,19 @@ const Roles = () => {
 
   // Dohvati status permisije za korisnika
   const getPermissionStatus = (permissionCode) => {
+    // Prvo provjeri direktne permisije
     const directPerm = userDirectPermissions.find(p => p.permission_code === permissionCode);
     if (directPerm) {
       return directPerm.granted ? 'granted' : 'denied';
     }
     
+    // Provjeri efektivne permisije
     const effectivePerm = userEffectivePermissions.find(p => p.permission_code === permissionCode);
     if (effectivePerm) {
+      // Ako ima source='DIRECT', to je direktna permisija (granted)
+      if (effectivePerm.source === 'DIRECT') {
+        return 'granted';
+      }
       return 'from-role';
     }
     

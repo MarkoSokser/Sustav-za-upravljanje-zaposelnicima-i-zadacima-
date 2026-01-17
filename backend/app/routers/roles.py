@@ -493,9 +493,11 @@ async def get_user_effective_permissions(
     
     Korisnik moze vidjeti vlastite permisije ili ako ima ROLE_READ permisiju.
     """
+    from ..auth import check_permission
+    
     # Provjeri da li korisnik gleda vlastite permisije ili ima ROLE_READ
     if current_user['user_id'] != user_id:
-        if 'ROLE_READ' not in current_user.get('permissions', []):
+        if not check_permission(conn, current_user['user_id'], 'ROLE_READ'):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Nemate pristup permisijama ovog korisnika"
